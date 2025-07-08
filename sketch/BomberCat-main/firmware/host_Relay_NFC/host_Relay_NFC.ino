@@ -1,5 +1,16 @@
 #include "bombercat_config.h"
 /************************************************************
+
+// Platform compatibility defines
+#ifdef ESP32
+  #define BOMBERCAT_ESP32
+#endif
+
+#ifdef ARDUINO_ARCH_MBED
+  #define BOMBERCAT_MBED
+#endif
+
+
   Example for read NFC card via MQTT version for BomberCat
   by Andres Sabas, Electronic Cats (https://electroniccats.com/)
   by Raul Vargas
@@ -32,7 +43,7 @@
 #include <WiFiNINA.h>
 #include <PubSubClient.h>
 #include <SerialCommand.h>
-#include "Electroniccats_PN7150.h"
+#include <ElectronicCats_PN7150.h>
 
 //#define DEBUG
 #define SERIALCOMMAND_HARDWAREONLY
@@ -43,8 +54,8 @@
 //Create a client ID
 char hostId[] = "BomberCatHost-CARD##";
 
-#include <FlashIAPBlockDevice.h>
-#include <TDBStore.h>
+// #include <FlashIAPBlockDevice.h> // Commented out - incompatible with ESP32
+// #include <TDBStore.h> // Commented out - incompatible with ESP32
 
 using namespace mbed;
 

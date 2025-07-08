@@ -2,7 +2,7 @@
 """
 BomberCat Arduino Flasher - Complete System with Arduino CLI Integration
 Compiles and flashes firmware from ElectronicCats/BomberCat repository
-COMPLETE VERSION - All libraries included
+FINAL VERSION - All libraries included with platform-specific fixes
 """
 import os
 import sys
@@ -15,6 +15,7 @@ import tempfile
 import zipfile
 import requests
 import threading
+import re
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any, List
@@ -29,7 +30,7 @@ class Config:
     # Arduino CLI Settings
     arduino_cli_version: str = "0.35.3"
     arduino_cli_path: str = ""
-    arduino_fqbn: str = "esp32:esp32:esp32"  # Fully Qualified Board Name
+    arduino_fqbn: str = "electroniccats:mbed_rp2040:bombercat"  # Fully Qualified Board Name
     
     # BomberCat Repository
     repo_owner: str = "ElectronicCats"
@@ -77,8 +78,21 @@ class Config:
         "SerialCommand": ["Arduino-SerialCommand", "SerialCommand-ng"],
         "NDEF Library": ["NDEF", "NDEF-1", "Seeed_Arduino_NFC_NDEF"],
         "ESP32Servo": ["ESP32_Servo", "ServoESP32"],
-        "ElectronicCats-PN7150": ["ElectronicCats PN7150", "PN7150", "Electroniccats_PN7150"]
+        "ElectronicCats-PN7150": ["ElectronicCats PN7150", "Electronic Cats PN7150", "PN7150", "Electroniccats_PN7150"]
     })
+    
+    # Libraries that are platform-specific and should be removed/commented for ESP32
+    incompatible_libraries: List[str] = field(default_factory=lambda: [
+        "FlashIAPBlockDevice.h",  # ARM mbed specific
+        "TDBStore.h",             # ARM mbed specific
+        "KVStore.h",              # ARM mbed specific
+        "mbed.h",                 # ARM mbed specific
+        "rtos.h",                 # ARM mbed RTOS
+        "mbed_events.h",          # ARM mbed events
+        "platform/mbed_",         # Any mbed platform specific
+        "features/storage",       # mbed storage features
+        "features/filesystem",    # mbed filesystem
+    ])
     
     # Flask Settings
     flask_host: str = "0.0.0.0"
@@ -581,46 +595,145 @@ class FirmwareManager:
             self.arduino.emit_log("No firmware found in repository, creating example", "warning")
             return self.create_example_firmware()
         
-        # Check and fix missing library includes
-        self.fix_library_includes()
+        # Check and fix missing library includes AND platform-specific issues
+        self.fix_firmware_compatibility()
         
         self.arduino.emit_log("Firmware downloaded successfully", "success")
         self.arduino.emit_progress(60)
         
         return str(self.sketch_path)
     
-    def fix_library_includes(self):
-        """Fix common library include issues in firmware"""
+    def fix_firmware_compatibility(self):
+        """Fix library includes and remove platform-specific code"""
         if not self.sketch_path:
             return
             
-        # Common library name corrections
+        # Common library name corrections - EXPANDED LIST
         library_fixes = {
+            # PN7150 variations - try to standardize to angle brackets
+            '"ElectronicCats_PN7150.h"': '<ElectronicCats_PN7150.h>',
+            '"Electroniccats_PN7150.h"': '<ElectronicCats_PN7150.h>',
+            '"PN7150.h"': '<ElectronicCats_PN7150.h>',
             'Electroniccats_PN7150.h': 'ElectronicCats_PN7150.h',
             'electroniccats_pn7150.h': 'ElectronicCats_PN7150.h',
-            'PN7150.h': 'ElectronicCats_PN7150.h'
+            'PN7150.h': 'ElectronicCats_PN7150.h',
+            'ElectronicCats_ElectronicCats_PN7150.h': 'ElectronicCats_PN7150.h'
         }
         
-        # Check all .ino and .h files
-        for ext in ['*.ino', '*.h']:
+        # Check what PN7150 library is actually installed
+        arduino_libs = Path.home() / "Documents" / "Arduino" / "libraries"
+        pn7150_found = None
+        
+        if arduino_libs.exists():
+            for item in arduino_libs.iterdir():
+                if item.is_dir() and "pn7150" in item.name.lower():
+                    # Found PN7150 library, check for header
+                    headers = list(item.glob("*.h"))
+                    for header in headers:
+                        if "pn7150" in header.name.lower():
+                            pn7150_found = header.name
+                            self.arduino.emit_log(f"Found PN7150 library: {item.name} with header: {header.name}", "info")
+                            break
+        
+        # If we found the actual header name, update our fixes
+        if pn7150_found:
+            for key in list(library_fixes.keys()):
+                if "PN7150" in key:
+                    library_fixes[key] = pn7150_found
+        
+        # Process all .ino, .h, and .cpp files
+        for ext in ['*.ino', '*.h', '*.cpp']:
             for file_path in Path(self.sketch_path).glob(ext):
                 try:
                     with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                         content = f.read()
                     
+                    original_content = content
                     modified = False
+                    
+                    # Fix library includes
                     for old_name, new_name in library_fixes.items():
                         if old_name in content:
                             content = content.replace(old_name, new_name)
                             modified = True
                             self.arduino.emit_log(f"Fixed include: {old_name} -> {new_name} in {file_path.name}", "info")
                     
+                    # Fix include format (quotes to angle brackets)
+                    lines = content.split('\n')
+                    new_lines = []
+                    
+                    for line in lines:
+                        # Convert quoted includes to angle brackets for system libraries
+                        if '#include "' in line and any(lib in line for lib in ['PN7150', 'ElectronicCats']):
+                            # Extract the header name
+                            match = re.search(r'#include\s*"([^"]+)"', line)
+                            if match:
+                                header = match.group(1)
+                                # Fix the header name if needed
+                                for old, new in library_fixes.items():
+                                    if old in header:
+                                        header = new
+                                new_line = f'#include <{header}>'
+                                new_lines.append(new_line)
+                                if new_line != line:
+                                    self.arduino.emit_log(f"Changed include format: {line.strip()} -> {new_line}", "info")
+                                    modified = True
+                                continue
+                        
+                        # Check for incompatible includes
+                        should_comment = False
+                        for incompatible in config.incompatible_libraries:
+                            if f'#include <{incompatible}>' in line or f'#include "{incompatible}"' in line:
+                                should_comment = True
+                                self.arduino.emit_log(f"Commenting out incompatible include: {incompatible} in {file_path.name}", "warning")
+                                break
+                        
+                        if should_comment and not line.strip().startswith('//'):
+                            new_lines.append(f"// {line} // Commented out - incompatible with ESP32")
+                            modified = True
+                        else:
+                            new_lines.append(line)
+                    
                     if modified:
+                        content = '\n'.join(new_lines)
+                        
+                        # Add platform-specific defines if needed
+                        if '#ifdef ESP32' not in content and any(inc in original_content for inc in config.incompatible_libraries):
+                            # Add ESP32 platform check at the beginning
+                            defines = """
+// Platform compatibility defines
+#ifdef ESP32
+  #define BOMBERCAT_ESP32
+#endif
+
+#ifdef ARDUINO_ARCH_MBED
+  #define BOMBERCAT_MBED
+#endif
+
+"""
+                            # Find where to insert (after initial comments)
+                            insert_pos = 0
+                            for i, line in enumerate(new_lines):
+                                if line.strip() and not line.strip().startswith('//') and not line.strip().startswith('/*'):
+                                    insert_pos = i
+                                    break
+                            
+                            new_lines.insert(insert_pos, defines)
+                            content = '\n'.join(new_lines)
+                            self.arduino.emit_log(f"Added platform compatibility defines to {file_path.name}", "info")
+                        
+                        # Save modified file
                         with open(file_path, 'w', encoding='utf-8') as f:
                             f.write(content)
                             
                 except Exception as e:
                     self.arduino.emit_log(f"Warning: Could not process {file_path.name}: {e}", "warning")
+        
+        # If PN7150 is still problematic, suggest alternatives
+        if not pn7150_found:
+            self.arduino.emit_log("⚠️ PN7150 library not found or has issues", "warning")
+            self.arduino.emit_log("💡 Consider using CLIENT firmware instead (uses PN532)", "info")
+            self.arduino.emit_log("Run: python switch_firmware_v2.py and select CLIENT", "info")
     
     def create_example_firmware(self):
         """Create example BomberCat firmware"""
@@ -634,6 +747,7 @@ class FirmwareManager:
         sketch_content = """
 // BomberCat NFC Example - Compatible Firmware
 // Works with PN532 NFC module
+// This is a simplified version that compiles on ESP32
 
 #include <WiFi.h>
 #include <PubSubClient.h>
@@ -1335,11 +1449,17 @@ This system will:
   ✓ Let you choose between HOST/CLIENT roles
   ✓ Configure WiFi and MQTT settings
   ✓ Compile and flash to your BomberCat
+  ✓ Fix platform-specific compatibility issues
 
 Libraries included:
   ✓ All NFC libraries (PN532, PN7150)
   ✓ WiFi and communication libraries
   ✓ LED and hardware control libraries
+
+Platform fixes:
+  ✓ Removes ARM mbed specific includes
+  ✓ Comments out incompatible libraries
+  ✓ Adds platform detection defines
 
 For NFC Relay Attack, you need:
   • 2 ESP32 devices with NFC modules

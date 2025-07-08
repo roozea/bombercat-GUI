@@ -1,9 +1,20 @@
 // Ensures that this file is only included once
+
+// Platform compatibility defines
+#ifdef ESP32
+  #define BOMBERCAT_ESP32
+#endif
+
+#ifdef ARDUINO_ARCH_MBED
+  #define BOMBERCAT_MBED
+#endif
+
+
 #pragma once 
 
 #include <Arduino.h>
 #include <FlashIAP.h>
-#include <FlashIAPBlockDevice.h>
+// #include <FlashIAPBlockDevice.h> // Commented out - incompatible with ESP32
 
 using namespace mbed;
 
