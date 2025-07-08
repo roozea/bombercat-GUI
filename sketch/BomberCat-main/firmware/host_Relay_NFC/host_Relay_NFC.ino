@@ -32,7 +32,7 @@
 #include <WiFiNINA.h>
 #include <PubSubClient.h>
 #include <SerialCommand.h>
-#include "ElectronicCats_ElectronicCats_PN7150.h"
+#include "Electroniccats_PN7150.h"
 
 //#define DEBUG
 #define SERIALCOMMAND_HARDWAREONLY
