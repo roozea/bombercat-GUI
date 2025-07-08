@@ -1,0 +1,30 @@
+# Core dependencies
+Flask==3.0.0
+flask-socketio==5.3.6
+python-socketio==5.11.0
+paho-mqtt==1.6.1
+pyserial==3.5
+
+# HTTP requests for remote firmware
+requests==2.31.0
+
+# WebSocket supportp
+python-engineio==4.8.0
+eventlet==0.33.3
+
+# Optional for enhanced features
+python-dotenv==1.0.0
+gunicorn==21.2.0
+flask-cors==4.0.0
+
+# File handling
+werkzeug==3.0.1
+
+Flask==3.0.0
+Flask-SocketIO==5.3.5
+python-socketio==5.10.0
+python-engineio==4.8.0
+pyserial==3.5
+requests==2.31.0
+python-dotenv==1.0.0
+Werkzeug==3.0.1

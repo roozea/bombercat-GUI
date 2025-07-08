@@ -1,0 +1,151 @@
+# Environment variables and sensitive data
+.env
+*.env
+.env.local
+.env.production
+.env.staging
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdkconfig.old
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+PIPFILE.lock
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Build artifacts
+build/
+*.bin
+*.hex
+*.elf
+*.map
+
+# Arduino/ESP32 specific
+.arduino15/
+.espressif/
+tools/arduino-cli
+
+# Firmware binaries (keep sample ones)
+bombercat_firmware.bin
+
+# Private configurations
+firmware_config.json
+arduino_secrets.h
+
+# System files
+.last-used
+file_opts
+sdkconfig
+partitions.csv
+
+# Sketch build files
+sketch/*.cpp
+sketch/*.h
+!sketch/README.md
+
+# Emergency and debug scripts
+emergency_fix.sh
+fix_*.py
+quick_fix.py
+debug_*.py
+
+# Runtime files
+*.pid
+*.sock
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Certificates and keys
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Backup files
+*.backup
+*.old
+
+# OS generated files
+.DS_Store?
+ehthumbs.db
+Icon?
+
+# Coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json

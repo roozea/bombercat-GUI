@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BomberCat Arduino Flash Wizard</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary-color: #ff006e;
+            --secondary-color: #8338ec;
+            --accent-color: #3a86ff;
+            --success-color: #06ffa5;
+            --danger-color: #ff006e;
+            --warning-color: #ffb700;
+            --bg-dark: #0a0a0a;
+            --bg-card: rgba(20, 20, 20, 0.8);
+            --text-primary: #ffffff;
+            --text-secondary: #a8a8a8;
+        }
+        
+        body {
+            font-family: 'Space Mono', monospace;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            position: relative;
+            min-height: 100vh;
+        }
+        
+        /* Animated Background */
+        .bg-animation {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            opacity: 0.03;
+            background-image: 
+                repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255, 0, 110, 0.5) 35px, rgba(255, 0, 110, 0.5) 70px),
+                repeating-linear-gradient(-45deg, transparent, transparent 35px, rgba(131, 56, 236, 0.5) 35px, rgba(131, 56, 236, 0.5) 70px);
+            animation: backgroundShift 20s linear infinite;
+        }
+        
+        @keyframes backgroundShift {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(70px, 70px); }
+        }
+        
+        /* Particle System */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            opacity: 0;
+            animation: float 15s infinite;
+            box-shadow: 0 0 10px var(--accent-color);
+        }
+        
+        @keyframes float {
+            0% {
+                opacity: 0;
+                transform: translateY(100vh) scale(0);
+            }
+            10% {
+                opacity: 1;
+                transform: translateY(90vh) scale(1);
+            }
+            90% {
+                opacity: 1;
+                transform: translateY(10vh) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(0) scale(0);
+            }
+        }
+        
+        /* Main Container */
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            position: relative;
+        }
+        
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 4rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color), var(--accent-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            position: relative;
+            display: inline-block;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { filter: drop-shadow(0 0 20px rgba(255, 0, 110, 0.5)); }
+            to { filter: drop-shadow(0 0 30px rgba(131, 56, 236, 0.8)); }
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            letter-spacing: 0.3em;
+            animation: fadeInUp 1s ease-out;
+        }
+        
+        .back-button {
+            position: absolute;
+            left: 2rem;
+            top: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 0.8rem 1.5rem;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(-5px);
+            box-shadow: 0 5px 20px rgba(58, 134, 255, 0.3);
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Wizard Container */
+        .wizard-container {
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Wizard Steps */
+        .wizard-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3rem;
+            position: relative;
+        }
+        
+        .wizard-steps::before {
+            content: '';
+            position: absolute;
+            top: 25px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            z-index: -1;
+        }
+        
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .step-number {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .step.active .step-number {
+            background: var(--accent-color);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 20px var(--accent-color);
+            animation: pulse 1.5s infinite;
+        }
+        
+        .step.completed .step-number {
+            background: var(--success-color);
+            border-color: var(--success-color);
+        }
+        
+        .step-title {
+            font-size: 0.85rem;
+            text-align: center;
+            color: var(--text-secondary);
+            transition: color 0.3s ease;
+        }
+        
+        .step.active .step-title {
+            color: var(--text-primary);
+        }
+        
+        /* Step Content */
+        .step-content {
+            min-height: 400px;
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Step 1: Detection */
+        .device-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        
+        .device-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid transparent;
+            border-radius: 15px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .device-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent-color);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(58, 134, 255, 0.3);
+        }
+        
+        .device-card.selected {
+            border-color: var(--success-color);
+            background: rgba(6, 255, 165, 0.1);
+        }
+        
+        .device-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+            text-align: center;
+        }
+        
+        .device-name {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .device-info {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        
+        .device-status {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--success-color);
+            box-shadow: 0 0 10px var(--success-color);
+            animation: pulse 1.5s infinite;
+        }
+        
+        /* Step 2: Dependencies */
+        .dependency-list {
+            margin-top: 2rem;
+        }
+        
+        .dependency-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .dependency-info {
+            flex: 1;
+        }
+        
+        .dependency-name {
+            font-weight: 700;
+            margin-bottom: 0.3rem;
+        }
+        
+        .dependency-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        
+        .dependency-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .status-icon {
+            font-size: 1.5rem;
+        }
+        
+        /* Step 3: Configuration */
+        .config-form {
+            max-width: 600px;
+            margin: 2rem auto;
+        }
+        
+        .form-group {
+            margin-bottom: 2rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--accent-color);
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: white;
+            font-family: 'Space Mono', monospace;
+            transition: all 0.3s ease;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 20px rgba(58, 134, 255, 0.2);
+        }
+        
+        .form-help {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.3rem;
+        }
+        
+        /* Firmware Type Selector */
+        .firmware-selector {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: rgba(58, 134, 255, 0.1);
+            border: 1px solid rgba(58, 134, 255, 0.3);
+            border-radius: 15px;
+        }
+        
+        .firmware-selector-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            color: var(--accent-color);
+            text-align: center;
+        }
+        
+        .firmware-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        
+        .firmware-option {
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid transparent;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .firmware-option:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent-color);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(58, 134, 255, 0.3);
+        }
+        
+        .firmware-option.selected {
+            border-color: var(--success-color);
+            background: rgba(6, 255, 165, 0.1);
+            box-shadow: 0 5px 20px rgba(6, 255, 165, 0.3);
+        }
+        
+        .firmware-option-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .firmware-option-name {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+        
+        .firmware-option-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+        
+        /* Step 4: Flash */
+        .flash-terminal {
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(6, 255, 165, 0.3);
+            border-radius: 15px;
+            height: 400px;
+            margin-top: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .flash-terminal-header {
+            background: rgba(6, 255, 165, 0.1);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(6, 255, 165, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .flash-terminal-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--success-color);
+        }
+        
+        .flash-terminal-content {
+            height: calc(100% - 60px);
+            overflow-y: auto;
+            padding: 1.5rem;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.85rem;
+        }
+        
+        .flash-log-entry {
+            padding: 0.3rem 0;
+            animation: terminalFadeIn 0.3s ease-out;
+        }
+        
+        @keyframes terminalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .flash-log-entry.success {
+            color: var(--success-color);
+        }
+        
+        .flash-log-entry.error {
+            color: var(--danger-color);
+        }
+        
+        .flash-log-entry.warning {
+            color: var(--warning-color);
+        }
+        
+        .flash-log-entry.info {
+            color: var(--accent-color);
+        }
+        
+        /* Progress Bar */
+        .progress-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            height: 30px;
+            margin: 2rem 0;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-color), var(--success-color));
+            width: 0%;
+            transition: width 0.5s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent
+            );
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Buttons */
+        .wizard-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 3rem;
+            gap: 1rem;
+        }
+        
+        .cyber-button {
+            padding: 1rem 2rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            z-index: 1;
+        }
+        
+        .cyber-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s ease;
+            z-index: -1;
+        }
+        
+        .cyber-button:hover::before {
+            left: 100%;
+        }
+        
+        .cyber-button:active {
+            transform: scale(0.98);
+        }
+        
+        .cyber-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            box-shadow: 0 5px 20px rgba(255, 0, 110, 0.3);
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            box-shadow: 0 8px 30px rgba(255, 0, 110, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #2a2a2a, #3a3a3a);
+            color: white;
+            border: 2px solid var(--accent-color);
+            box-shadow: 0 5px 20px rgba(58, 134, 255, 0.3);
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            box-shadow: 0 8px 30px rgba(58, 134, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        /* Alert Container */
+        .alert-container {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            z-index: 2000;
+        }
+        
+        .alert {
+            background: rgba(20, 20, 20, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 1rem;
+            min-width: 300px;
+            position: relative;
+            overflow: hidden;
+            transform: translateX(400px);
+            transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        
+        .alert.show {
+            transform: translateX(0);
+        }
+        
+        .alert::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent-color);
+        }
+        
+        .alert.success::before {
+            background: var(--success-color);
+        }
+        
+        .alert.error::before {
+            background: var(--danger-color);
+        }
+        
+        .alert.warning::before {
+            background: var(--warning-color);
+        }
+        
+        /* Loading Spinner */
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        
+        .loader::after {
+            content: '';
+            display: block;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-top-color: var(--accent-color);
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(6, 255, 165, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 15px rgba(6, 255, 165, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(6, 255, 165, 0);
+            }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .logo {
+                font-size: 2.5rem;
+            }
+            
+            .wizard-steps {
+                flex-wrap: wrap;
+            }
+            
+            .main-container {
+                padding: 1rem;
+            }
+            
+            .device-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .back-button {
+                position: static;
+                margin-bottom: 2rem;
+            }
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, var(--primary-color), var(--secondary-color));
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to bottom, var(--secondary-color), var(--accent-color));
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Animation -->
+    <div class="bg-animation"></div>
+    
+    <!-- Particle System -->
+    <div class="particles" id="particles"></div>
+    
+    <!-- Back Button -->
+    <a href="/" class="back-button">
+        <span>←</span>
+        <span>BACK TO MAIN</span>
+    </a>
+    
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="logo">🔥 BomberCat</h1>
+            <p class="subtitle">ARDUINO FLASH WIZARD</p>
+        </header>
+        
+        <!-- Wizard Container -->
+        <div class="wizard-container">
+            <!-- Wizard Steps -->
+            <div class="wizard-steps">
+                <div class="step active" id="step-1" onclick="goToStep(1)">
+                    <div class="step-number">1</div>
+                    <div class="step-title">Detect Device</div>
+                </div>
+                <div class="step" id="step-2" onclick="goToStep(2)">
+                    <div class="step-number">2</div>
+                    <div class="step-title">Install Dependencies</div>
+                </div>
+                <div class="step" id="step-3" onclick="goToStep(3)">
+                    <div class="step-number">3</div>
+                    <div class="step-title">Configure</div>
+                </div>
+                <div class="step" id="step-4" onclick="goToStep(4)">
+                    <div class="step-number">4</div>
+                    <div class="step-title">Flash</div>
+                </div>
+            </div>
+            
+            <!-- Step Content -->
+            <div class="step-content" id="step-content">
+                <!-- Step 1: Device Detection -->
+                <div id="step-1-content">
+                    <h2 style="font-family: 'Orbitron', sans-serif; margin-bottom: 1rem;">Select Your BomberCat Device</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                        Connect your BomberCat via USB and click refresh to detect it. We'll automatically identify ESP32-based boards.
+                    </p>
+                    
+                    <div class="device-grid" id="device-grid">
+                        <!-- Devices will be populated here -->
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 2rem;">
+                        <button class="cyber-button btn-secondary" onclick="refreshDevices()">
+                            <span id="refresh-text">REFRESH DEVICES</span>
+                            <span class="loader" id="refresh-loader" style="display: none;"></span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Step 2: Dependencies -->
+                <div id="step-2-content" style="display: none;">
+                    <h2 style="font-family: 'Orbitron', sans-serif; margin-bottom: 1rem;">Install Required Dependencies</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                        We'll automatically install Arduino CLI, ESP32 board support, and required libraries.
+                    </p>
+                    
+                    <div class="dependency-list">
+                        <div class="dependency-item">
+                            <div class="dependency-info">
+                                <div class="dependency-name">Arduino CLI</div>
+                                <div class="dependency-desc">Command-line tool for compiling and uploading sketches</div>
+                            </div>
+                            <div class="dependency-status">
+                                <span class="status-icon" id="arduino-cli-status">⏳</span>
+                                <span id="arduino-cli-text">Checking...</span>
+                            </div>
+                        </div>
+                        
+                        <div class="dependency-item">
+                            <div class="dependency-info">
+                                <div class="dependency-name">ESP32 Board Support</div>
+                                <div class="dependency-desc">Espressif ESP32 board definitions and tools</div>
+                            </div>
+                            <div class="dependency-status">
+                                <span class="status-icon" id="esp32-status">⏳</span>
+                                <span id="esp32-text">Checking...</span>
+                            </div>
+                        </div>
+                        
+                        <div class="dependency-item">
+                            <div class="dependency-info">
+                                <div class="dependency-name">Required Libraries</div>
+                                <div class="dependency-desc">
+                                    Core: WiFiManager, PubSubClient, ArduinoJson<br>
+                                    NFC: Adafruit PN532, ElectronicCats PN7150, NDEF<br>
+                                    Hardware: SerialCommand, ESP32Servo, FastLED, and more...
+                                </div>
+                            </div>
+                            <div class="dependency-status">
+                                <span class="status-icon" id="libraries-status">⏳</span>
+                                <span id="libraries-text">Checking...</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flash-terminal" id="dependency-terminal" style="display: none;">
+                        <div class="flash-terminal-header">
+                            <span class="flash-terminal-title">INSTALLATION LOG</span>
+                        </div>
+                        <div class="flash-terminal-content" id="dependency-log"></div>
+                    </div>
+                </div>
+                
+                <!-- Step 3: Configuration -->
+                <div id="step-3-content" style="display: none;">
+                    <h2 style="font-family: 'Orbitron', sans-serif; margin-bottom: 1rem;">Configure Your BomberCat</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                        Set up WiFi credentials, MQTT broker, and device identification.
+                    </p>
+                    
+                    <div class="config-form">
+                        <div class="form-group">
+                            <label class="form-label">WiFi Network Name (SSID)</label>
+                            <input type="text" class="form-input" id="wifi-ssid" placeholder="MyWiFiNetwork">
+                            <div class="form-help">The name of your WiFi network</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">WiFi Password</label>
+                            <input type="password" class="form-input" id="wifi-password" placeholder="••••••••">
+                            <div class="form-help">Leave empty for open networks</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">MQTT Broker</label>
+                            <input type="text" class="form-input" id="mqtt-server" value="broker.hivemq.com">
+                            <div class="form-help">MQTT broker address (default: HiveMQ public broker)</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">MQTT Port</label>
+                            <input type="number" class="form-input" id="mqtt-port" value="1883">
+                            <div class="form-help">Standard MQTT port is 1883</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Host Number</label>
+                            <input type="number" class="form-input" id="host-number" value="1" min="1" max="99">
+                            <div class="form-help">Unique identifier for this BomberCat (1-99)</div>
+                        </div>
+                        
+                        <!-- Firmware Type Selector -->
+                        <div class="firmware-selector" id="firmware-selector" style="display: none;">
+                            <div class="firmware-selector-title">🔥 Select BomberCat Role for NFC Relay Attack</div>
+                            <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 1rem 0; text-align: center;">
+                                For NFC relay attacks, you need TWO BomberCat devices with different roles:
+                            </p>
+                            <div class="firmware-options">
+                                <div class="firmware-option" onclick="selectFirmwareType('host')" data-type="host">
+                                    <div class="firmware-option-icon">📡</div>
+                                    <div class="firmware-option-name">HOST DEVICE</div>
+                                    <div class="firmware-option-desc">
+                                        Connects to the legitimate NFC reader<br>
+                                        <small style="color: var(--warning-color);">📍 Place near: ATM, door reader, payment terminal</small>
+                                    </div>
+                                </div>
+                                <div class="firmware-option" onclick="selectFirmwareType('client')" data-type="client">
+                                    <div class="firmware-option-icon">📱</div>
+                                    <div class="firmware-option-name">CLIENT DEVICE</div>
+                                    <div class="firmware-option-desc">
+                                        Emulates the victim's NFC card<br>
+                                        <small style="color: var(--warning-color);">📍 Place near: victim's wallet/card</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(255, 183, 0, 0.1); border: 1px solid var(--warning-color); border-radius: 10px;">
+                                <p style="color: var(--warning-color); font-size: 0.85rem; text-align: center; margin: 0;">
+                                    ⚠️ <strong>IMPORTANT:</strong> Use Host Number 1 for HOST device and Host Number 2 for CLIENT device
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Step 4: Flash -->
+                <div id="step-4-content" style="display: none;">
+                    <h2 style="font-family: 'Orbitron', sans-serif; margin-bottom: 1rem;">Flashing Your BomberCat</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                        Sit back and relax while we compile and flash the firmware to your device.
+                    </p>
+                    
+                    <div class="progress-container">
+                        <div class="progress-bar" id="progress-bar"></div>
+                        <div class="progress-text" id="progress-text">0%</div>
+                    </div>
+                    
+                    <div class="flash-terminal">
+                        <div class="flash-terminal-header">
+                            <span class="flash-terminal-title">FLASH OPERATION LOG</span>
+                        </div>
+                        <div class="flash-terminal-content" id="flash-log"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Wizard Buttons -->
+            <div class="wizard-buttons">
+                <button class="cyber-button btn-secondary" id="btn-back" onclick="previousStep()" style="display: none;">
+                    BACK
+                </button>
+                <button class="cyber-button btn-primary" id="btn-next" onclick="nextStep()" disabled>
+                    NEXT
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Alert Container -->
+    <div class="alert-container" id="alert-container"></div>
+    
+    <script>
+        // Global Variables
+        let socket = null;
+        let currentStep = 1;
+        let selectedDevice = null;
+        let dependenciesInstalled = false;
+        let flashInProgress = false;
+        let selectedFirmwareType = 'host';  // Default to HOST
+        let availableFirmwares = [];
+        
+        // Initialize Socket.IO
+        function initSocket() {
+            socket = io({
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                reconnectionAttempts: Infinity
+            });
+            
+            socket.on('connect', function() {
+                console.log('Connected to server');
+                showAlert('Connected to server', 'success');
+                
+                // If we're on step 2 and installation was in progress, check status
+                if (currentStep === 2 && dependenciesInstalled === false) {
+                    checkDependencies();
+                }
+            });
+            
+            socket.on('flash_log', function(data) {
+                if (currentStep === 2) {
+                    addDependencyLog(data.message, data.level);
+                } else if (currentStep === 4) {
+                    addFlashLog(data.message, data.level);
+                }
+            });
+            
+            socket.on('flash_progress', function(data) {
+                updateProgress(data.progress);
+            });
+            
+            socket.on('installation_complete', function(data) {
+                if (data.success) {
+                    dependenciesInstalled = true;
+                    updateNextButton();
+                    updateDependencyStatus('arduino-cli', true);
+                    updateDependencyStatus('esp32', true);
+                    updateDependencyStatus('libraries', true);
+                    showAlert('All dependencies installed successfully!', 'success');
+                } else {
+                    showAlert('Installation failed: ' + data.message, 'error');
+                }
+            });
+            
+            socket.on('installation_status', function(data) {
+                if (data.completed) {
+                    dependenciesInstalled = true;
+                    updateNextButton();
+                    updateDependencyStatus('arduino-cli', true);
+                    updateDependencyStatus('esp32', true);
+                    updateDependencyStatus('libraries', true);
+                }
+            });
+            
+            socket.on('disconnect', function() {
+                console.log('Disconnected from server');
+                showAlert('Connection lost. Attempting to reconnect...', 'warning');
+            });
+            
+            socket.on('reconnect', function() {
+                console.log('Reconnected to server');
+                showAlert('Reconnected to server', 'success');
+            });
+            
+            // Heartbeat to keep connection alive
+            setInterval(function() {
+                if (socket.connected) {
+                    socket.emit('ping');
+                }
+            }, 25000);
+        }
+        
+        // Initialize Particles
+        function createParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 15 + 's';
+                particle.style.animationDuration = (15 + Math.random() * 10) + 's';
+                container.appendChild(particle);
+            }
+        }
+        
+        // Alert System
+        function showAlert(message, type = 'info') {
+            const container = document.getElementById('alert-container');
+            const alert = document.createElement('div');
+            alert.className = `alert ${type}`;
+            alert.textContent = message;
+            
+            container.appendChild(alert);
+            
+            // Trigger show animation
+            setTimeout(() => alert.classList.add('show'), 10);
+            
+            // Remove after 4 seconds
+            setTimeout(() => {
+                alert.classList.remove('show');
+                setTimeout(() => alert.remove(), 500);
+            }, 4000);
+        }
+        
+        // Step Navigation
+        function updateSteps() {
+            for (let i = 1; i <= 4; i++) {
+                const step = document.getElementById(`step-${i}`);
+                const content = document.getElementById(`step-${i}-content`);
+                
+                step.classList.remove('active', 'completed');
+                content.style.display = 'none';
+                
+                if (i < currentStep) {
+                    step.classList.add('completed');
+                } else if (i === currentStep) {
+                    step.classList.add('active');
+                    content.style.display = 'block';
+                }
+            }
+            
+            // Update buttons
+            document.getElementById('btn-back').style.display = currentStep > 1 ? 'block' : 'none';
+            
+            const nextBtn = document.getElementById('btn-next');
+            if (currentStep === 4) {
+                nextBtn.textContent = flashInProgress ? 'FLASHING...' : 'FINISH';
+            } else {
+                nextBtn.textContent = 'NEXT';
+            }
+            
+            // Handle step-specific initialization
+            if (currentStep === 1) {
+                refreshDevices();
+            } else if (currentStep === 2) {
+                checkDependencies();
+            } else if (currentStep === 3) {
+                checkFirmwareInfo();
+            } else if (currentStep === 4) {
+                startFlashing();
+            }
+        }
+        
+        function goToStep(step) {
+            if (step < currentStep || (step === currentStep + 1 && canProceed())) {
+                currentStep = step;
+                updateSteps();
+            }
+        }
+        
+        function nextStep() {
+            if (currentStep < 4 && canProceed()) {
+                currentStep++;
+                updateSteps();
+            } else if (currentStep === 4 && !flashInProgress) {
+                // Finish
+                showAlert('BomberCat flashed successfully! Returning to main interface...', 'success');
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 3000);
+            }
+        }
+        
+        function previousStep() {
+            if (currentStep > 1) {
+                currentStep--;
+                updateSteps();
+            }
+        }
+        
+        function canProceed() {
+            switch (currentStep) {
+                case 1:
+                    return selectedDevice !== null;
+                case 2:
+                    return dependenciesInstalled;
+                case 3:
+                    const ssid = document.getElementById('wifi-ssid').value;
+                    return ssid.trim() !== '';
+                case 4:
+                    return !flashInProgress;
+                default:
+                    return false;
+            }
+        }
+        
+        function updateNextButton() {
+            document.getElementById('btn-next').disabled = !canProceed();
+        }
+        
+        // Step 1: Device Detection
+        async function refreshDevices() {
+            const refreshBtn = document.getElementById('refresh-text');
+            const loader = document.getElementById('refresh-loader');
+            
+            refreshBtn.style.display = 'none';
+            loader.style.display = 'inline-block';
+            
+            try {
+                const response = await fetch('/api/detect_boards');
+                const data = await response.json();
+                
+                const grid = document.getElementById('device-grid');
+                grid.innerHTML = '';
+                
+                if (data.ports.length === 0) {
+                    grid.innerHTML = '<p style="text-align: center; color: var(--text-secondary); grid-column: 1/-1;">No devices found. Please connect your BomberCat and try again.</p>';
+                } else {
+                    data.ports.forEach(port => {
+                        const card = createDeviceCard(port);
+                        grid.appendChild(card);
+                    });
+                }
+                
+            } catch (error) {
+                showAlert('Failed to detect devices', 'error');
+            } finally {
+                refreshBtn.style.display = 'inline';
+                loader.style.display = 'none';
+            }
+        }
+        
+        function createDeviceCard(port) {
+            const card = document.createElement('div');
+            card.className = 'device-card';
+            card.onclick = () => selectDevice(port);
+            
+            const isLikelyBombercat = port.likely_esp32 || port.description.includes('CP210') || port.description.includes('CH340');
+            
+            card.innerHTML = `
+                <div class="device-icon">${isLikelyBombercat ? '🔥' : '🔌'}</div>
+                <div class="device-name">${port.port}</div>
+                <div class="device-info">
+                    ${port.description || 'Unknown Device'}<br>
+                    ${port.manufacturer ? `Manufacturer: ${port.manufacturer}<br>` : ''}
+                    ${port.serial_number ? `Serial: ${port.serial_number}` : ''}
+                </div>
+                ${isLikelyBombercat ? '<div class="device-status"></div>' : ''}
+            `;
+            
+            return card;
+        }
+        
+        function selectDevice(device) {
+            selectedDevice = device;
+            
+            // Update UI
+            document.querySelectorAll('.device-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+            
+            updateNextButton();
+            showAlert(`Selected device: ${device.port}`, 'success');
+        }
+        
+        // Step 2: Dependencies
+        let dependencyCheckInterval = null;
+        
+        async function checkDependencies() {
+            // Clear any existing interval
+            if (dependencyCheckInterval) {
+                clearInterval(dependencyCheckInterval);
+            }
+            
+            try {
+                const response = await fetch('/api/check_dependencies');
+                const data = await response.json();
+                
+                updateDependencyStatus('arduino-cli', data.arduino_cli);
+                updateDependencyStatus('esp32', data.boards);
+                updateDependencyStatus('libraries', data.initialized);
+                
+                if (!data.arduino_cli || !data.boards || !data.initialized) {
+                    showAlert('Installing dependencies...', 'info');
+                    document.getElementById('dependency-terminal').style.display = 'block';
+                    installDependencies();
+                    
+                    // Start checking periodically for completion
+                    dependencyCheckInterval = setInterval(async () => {
+                        try {
+                            const checkResponse = await fetch('/api/check_dependencies');
+                            const checkData = await checkResponse.json();
+                            
+                            if (checkData.arduino_cli && checkData.boards && checkData.initialized) {
+                                clearInterval(dependencyCheckInterval);
+                                dependenciesInstalled = true;
+                                updateNextButton();
+                                updateDependencyStatus('arduino-cli', true);
+                                updateDependencyStatus('esp32', true);
+                                updateDependencyStatus('libraries', true);
+                                showAlert('All dependencies are installed!', 'success');
+                            }
+                        } catch (error) {
+                            console.error('Error checking dependencies:', error);
+                        }
+                    }, 3000); // Check every 3 seconds
+                } else {
+                    dependenciesInstalled = true;
+                    updateNextButton();
+                    showAlert('All dependencies are already installed!', 'success');
+                }
+                
+            } catch (error) {
+                showAlert('Failed to check dependencies', 'error');
+            }
+        }
+        
+        function updateDependencyStatus(id, installed) {
+            const statusIcon = document.getElementById(`${id}-status`);
+            const statusText = document.getElementById(`${id}-text`);
+            
+            if (installed) {
+                statusIcon.textContent = '✅';
+                statusText.textContent = 'Installed';
+            } else {
+                statusIcon.textContent = '❌';
+                statusText.textContent = 'Not installed';
+            }
+        }
+        
+        async function installDependencies() {
+            try {
+                const response = await fetch('/api/install_dependencies', { method: 'POST' });
+                const data = await response.json();
+                
+                // Installation will happen in background, logs will come via WebSocket
+                
+            } catch (error) {
+                showAlert('Failed to start installation', 'error');
+            }
+        }
+        
+        function addDependencyLog(message, level) {
+            const container = document.getElementById('dependency-log');
+            const entry = document.createElement('div');
+            entry.className = `flash-log-entry ${level}`;
+            const timestamp = new Date().toLocaleTimeString('es-ES', { hour12: false });
+            
+            entry.textContent = `[${timestamp}] ${message}`;
+            container.appendChild(entry);
+            
+            // Auto scroll to bottom
+            container.scrollTop = container.scrollHeight;
+            
+            // Check for completion messages
+            if (message.includes('All dependencies installed successfully') || 
+                message.includes('[SUCCESS] All dependencies installed successfully')) {
+                
+                // Clear any check interval
+                if (dependencyCheckInterval) {
+                    clearInterval(dependencyCheckInterval);
+                }
+                
+                dependenciesInstalled = true;
+                updateNextButton();
+                updateDependencyStatus('arduino-cli', true);
+                updateDependencyStatus('esp32', true);
+                updateDependencyStatus('libraries', true);
+                
+                // Double-check with the server after a short delay
+                setTimeout(async () => {
+                    try {
+                        const response = await fetch('/api/check_dependencies');
+                        const data = await response.json();
+                        if (data.arduino_cli && data.boards && data.initialized) {
+                            showAlert('All dependencies verified and ready!', 'success');
+                        }
+                    } catch (error) {
+                        console.error('Error verifying dependencies:', error);
+                    }
+                }, 1000);
+            }
+        }
+        
+        // Step 3: Configuration
+        async function checkFirmwareInfo() {
+            try {
+                const response = await fetch('/api/firmware_info');
+                const data = await response.json();
+                
+                availableFirmwares = data.firmwares || [];
+                
+                // Check if we have both HOST and CLIENT relay firmwares
+                const hasHost = availableFirmwares.some(fw => fw.type === 'host');
+                const hasClient = availableFirmwares.some(fw => fw.type === 'client');
+                
+                const firmwareSelector = document.getElementById('firmware-selector');
+                if (hasHost && hasClient) {
+                    firmwareSelector.style.display = 'block';
+                    // Auto-select HOST by default
+                    selectFirmwareType('host');
+                    showAlert('💡 NFC Relay detected! Please select the role for this device', 'info');
+                } else {
+                    firmwareSelector.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error checking firmware info:', error);
+            }
+        }
+        
+        function selectFirmwareType(type) {
+            selectedFirmwareType = type;
+            
+            // Update UI
+            document.querySelectorAll('.firmware-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            document.querySelector(`.firmware-option[data-type="${type}"]`).classList.add('selected');
+            
+            // Show different alerts based on selection
+            if (type === 'host') {
+                showAlert('📡 Selected HOST firmware - This device will connect to the NFC reader', 'success');
+                // Update host number suggestion
+                document.getElementById('host-number').value = '1';
+            } else if (type === 'client') {
+                showAlert('📱 Selected CLIENT firmware - This device will emulate the NFC card', 'success');
+                // Update host number suggestion
+                document.getElementById('host-number').value = '2';
+            }
+        }
+        
+        // Step 4: Flash
+        async function startFlashing() {
+            if (flashInProgress) return;
+            
+            flashInProgress = true;
+            updateNextButton();
+            
+            const flashData = {
+                port: selectedDevice.port,
+                wifi_ssid: document.getElementById('wifi-ssid').value,
+                wifi_password: document.getElementById('wifi-password').value,
+                mqtt_server: document.getElementById('mqtt-server').value,
+                mqtt_port: parseInt(document.getElementById('mqtt-port').value),
+                host_number: parseInt(document.getElementById('host-number').value),
+                firmware_type: selectedFirmwareType
+            };
+            
+            try {
+                const response = await fetch('/api/flash', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(flashData)
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Flash operation failed');
+                }
+                
+            } catch (error) {
+                showAlert(`Flash failed: ${error.message}`, 'error');
+                flashInProgress = false;
+                updateNextButton();
+            }
+        }
+        
+        function addFlashLog(message, level) {
+            const container = document.getElementById('flash-log');
+            const entry = document.createElement('div');
+            entry.className = `flash-log-entry ${level}`;
+            const timestamp = new Date().toLocaleTimeString('es-ES', { hour12: false });
+            
+            entry.textContent = `[${timestamp}] ${message}`;
+            container.appendChild(entry);
+            
+            // Auto scroll to bottom
+            container.scrollTop = container.scrollHeight;
+            
+            // Check for completion
+            if (message.includes('BomberCat is ready to use!')) {
+                flashInProgress = false;
+                updateNextButton();
+                document.getElementById('btn-next').textContent = 'FINISH';
+            }
+            
+            // Check if firmware selection info appears
+            if (message.includes('Found both HOST and CLIENT relay firmwares')) {
+                showAlert('💡 TIP: You need 2 devices - one HOST and one CLIENT for NFC relay', 'info');
+            }
+        }
+        
+        function updateProgress(progress) {
+            document.getElementById('progress-bar').style.width = progress + '%';
+            document.getElementById('progress-text').textContent = progress + '%';
+        }
+        
+        // Form validation
+        document.getElementById('wifi-ssid').addEventListener('input', updateNextButton);
+        document.getElementById('wifi-password').addEventListener('input', updateNextButton);
+        document.getElementById('mqtt-server').addEventListener('input', updateNextButton);
+        document.getElementById('mqtt-port').addEventListener('input', updateNextButton);
+        document.getElementById('host-number').addEventListener('input', updateNextButton);
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            createParticles();
+            initSocket();
+            updateSteps();
+        });
+    </script>
+</body>
+</html>

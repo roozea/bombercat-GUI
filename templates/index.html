@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bombercat NFC Relay - Cyber Interface</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary-color: #ff006e;
+            --secondary-color: #8338ec;
+            --accent-color: #3a86ff;
+            --success-color: #06ffa5;
+            --danger-color: #ff006e;
+            --warning-color: #ffb700;
+            --bg-dark: #0a0a0a;
+            --bg-card: rgba(20, 20, 20, 0.8);
+            --text-primary: #ffffff;
+            --text-secondary: #a8a8a8;
+        }
+        
+        body {
+            font-family: 'Space Mono', monospace;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            position: relative;
+            min-height: 100vh;
+        }
+        
+        /* Animated Background */
+        .bg-animation {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            opacity: 0.03;
+            background-image: 
+                repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255, 0, 110, 0.5) 35px, rgba(255, 0, 110, 0.5) 70px),
+                repeating-linear-gradient(-45deg, transparent, transparent 35px, rgba(131, 56, 236, 0.5) 35px, rgba(131, 56, 236, 0.5) 70px);
+            animation: backgroundShift 20s linear infinite;
+        }
+        
+        @keyframes backgroundShift {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(70px, 70px); }
+        }
+        
+        /* Particle System */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            opacity: 0;
+            animation: float 15s infinite;
+            box-shadow: 0 0 10px var(--accent-color);
+        }
+        
+        @keyframes float {
+            0% {
+                opacity: 0;
+                transform: translateY(100vh) scale(0);
+            }
+            10% {
+                opacity: 1;
+                transform: translateY(90vh) scale(1);
+            }
+            90% {
+                opacity: 1;
+                transform: translateY(10vh) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(0) scale(0);
+            }
+        }
+        
+        /* Main Container */
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            position: relative;
+        }
+        
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 4rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color), var(--accent-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            position: relative;
+            display: inline-block;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { filter: drop-shadow(0 0 20px rgba(255, 0, 110, 0.5)); }
+            to { filter: drop-shadow(0 0 30px rgba(131, 56, 236, 0.8)); }
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            letter-spacing: 0.3em;
+            animation: fadeInUp 1s ease-out;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Status Panel */
+        .status-panel {
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+            animation: slideIn 0.6s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .status-panel::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color), var(--accent-color));
+            border-radius: 20px;
+            opacity: 0;
+            z-index: -1;
+            transition: opacity 0.3s ease;
+        }
+        
+        .status-panel:hover::before {
+            opacity: 0.3;
+            animation: borderRotate 3s linear infinite;
+        }
+        
+        @keyframes borderRotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .status-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1.5rem;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .status-item:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 30px rgba(255, 0, 110, 0.2);
+        }
+        
+        .status-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        
+        .status-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.5rem;
+        }
+        
+        .status-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            font-family: 'Orbitron', sans-serif;
+        }
+        
+        .pulse-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+            position: relative;
+        }
+        
+        .pulse-indicator.active {
+            background: var(--success-color);
+            box-shadow: 0 0 20px var(--success-color);
+            animation: pulse 1.5s infinite;
+        }
+        
+        .pulse-indicator.inactive {
+            background: var(--danger-color);
+            box-shadow: 0 0 10px var(--danger-color);
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(6, 255, 165, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 15px rgba(6, 255, 165, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(6, 255, 165, 0);
+            }
+        }
+        
+        /* Control Cards */
+        .controls-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .control-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            animation: fadeInUp 0.8s ease-out;
+        }
+        
+        .control-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(131, 56, 236, 0.3);
+        }
+        
+        .control-card::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .control-card:hover::after {
+            opacity: 1;
+            animation: ripple 0.6s ease-out;
+        }
+        
+        @keyframes ripple {
+            from {
+                transform: scale(0);
+            }
+            to {
+                transform: scale(1);
+            }
+        }
+        
+        .control-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .control-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .control-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        
+        /* Cyber Button */
+        .cyber-button {
+            width: 100%;
+            padding: 1rem 2rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            z-index: 1;
+        }
+        
+        .cyber-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s ease;
+            z-index: -1;
+        }
+        
+        .cyber-button:hover::before {
+            left: 100%;
+        }
+        
+        .cyber-button:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            box-shadow: 0 5px 20px rgba(255, 0, 110, 0.3);
+        }
+        
+        .btn-primary:hover {
+            box-shadow: 0 8px 30px rgba(255, 0, 110, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #2a2a2a, #3a3a3a);
+            color: white;
+            border: 2px solid var(--accent-color);
+            box-shadow: 0 5px 20px rgba(58, 134, 255, 0.3);
+        }
+        
+        .btn-secondary:hover {
+            box-shadow: 0 8px 30px rgba(58, 134, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger-color), #cc0052);
+            color: white;
+            box-shadow: 0 5px 20px rgba(255, 0, 110, 0.3);
+        }
+        
+        /* Data Visualization */
+        .data-viz {
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            height: 400px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .data-stream {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .wave-container {
+            width: 100%;
+            height: 200px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .wave {
+            position: absolute;
+            width: 200%;
+            height: 100%;
+            left: 0;
+            bottom: 0;
+        }
+        
+        .wave-path {
+            stroke: var(--accent-color);
+            stroke-width: 3;
+            fill: none;
+            filter: drop-shadow(0 0 10px rgba(58, 134, 255, 0.5));
+            animation: waveAnimation 3s linear infinite;
+        }
+        
+        @keyframes waveAnimation {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        
+        /* Terminal Log */
+        .terminal {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(6, 255, 165, 0.3);
+            border-radius: 15px;
+            padding: 1.5rem;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.85rem;
+            position: relative;
+        }
+        
+        .terminal::before {
+            content: 'SYSTEM LOG';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(6, 255, 165, 0.1);
+            padding: 0.5rem 1.5rem;
+            font-size: 0.75rem;
+            letter-spacing: 0.2em;
+            border-bottom: 1px solid rgba(6, 255, 165, 0.3);
+        }
+        
+        .terminal-content {
+            margin-top: 2.5rem;
+        }
+        
+        .log-entry {
+            padding: 0.3rem 0;
+            border-left: 2px solid transparent;
+            padding-left: 1rem;
+            margin-bottom: 0.2rem;
+            animation: logFadeIn 0.3s ease-out;
+        }
+        
+        @keyframes logFadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .log-entry.success {
+            color: var(--success-color);
+            border-left-color: var(--success-color);
+        }
+        
+        .log-entry.error {
+            color: var(--danger-color);
+            border-left-color: var(--danger-color);
+        }
+        
+        .log-entry.info {
+            color: var(--accent-color);
+            border-left-color: var(--accent-color);
+        }
+        
+        /* Floating Alert */
+        .alert-container {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            z-index: 1000;
+        }
+        
+        .alert {
+            background: rgba(20, 20, 20, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 1rem;
+            min-width: 300px;
+            position: relative;
+            overflow: hidden;
+            transform: translateX(400px);
+            transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        
+        .alert.show {
+            transform: translateX(0);
+        }
+        
+        .alert::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent-color);
+        }
+        
+        .alert.success::before {
+            background: var(--success-color);
+        }
+        
+        .alert.error::before {
+            background: var(--danger-color);
+        }
+        
+        /* Loading Spinner */
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        
+        .loader::after {
+            content: '';
+            display: block;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-top-color: var(--accent-color);
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .logo {
+                font-size: 2.5rem;
+            }
+            
+            .controls-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .main-container {
+                padding: 1rem;
+            }
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, var(--primary-color), var(--secondary-color));
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to bottom, var(--secondary-color), var(--accent-color));
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Animation -->
+    <div class="bg-animation"></div>
+    
+    <!-- Particle System -->
+    <div class="particles" id="particles"></div>
+    
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="logo">🔥 Bombercat</h1>
+            <p class="subtitle">NFC RELAY SYSTEM</p>
+        </header>
+        
+        <!-- Status Panel -->
+        <div class="status-panel">
+            <h2 style="font-family: 'Orbitron', sans-serif; margin-bottom: 1rem;">SYSTEM STATUS</h2>
+            <div class="status-grid">
+                <div class="status-item">
+                    <span class="status-icon">⚡</span>
+                    <div class="status-label">Relay Status</div>
+                    <div class="status-value">
+                        <span class="pulse-indicator" id="relay-indicator"></span>
+                        <span id="relay-status">OFFLINE</span>
+                    </div>
+                </div>
+                <div class="status-item">
+                    <span class="status-icon">🌐</span>
+                    <div class="status-label">MQTT Connection</div>
+                    <div class="status-value">
+                        <span class="pulse-indicator" id="mqtt-indicator"></span>
+                        <span id="mqtt-status">DISCONNECTED</span>
+                    </div>
+                </div>
+                <div class="status-item">
+                    <span class="status-icon">📡</span>
+                    <div class="status-label">Data Packets</div>
+                    <div class="status-value" id="packet-count">0</div>
+                </div>
+                <div class="status-item">
+                    <span class="status-icon">⏱️</span>
+                    <div class="status-label">Uptime</div>
+                    <div class="status-value" id="uptime">00:00:00</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Control Cards -->
+        <div class="controls-section">
+            <div class="control-card">
+                <span class="control-icon">💾</span>
+                <h3 class="control-title">Firmware Update</h3>
+                <p class="control-description">Flash the latest firmware to both Bombercat devices for optimal performance</p>
+                <button class="cyber-button btn-secondary" onclick="openFlashWizard()" id="flash-btn">
+                    START FLASH WIZARD
+                </button>
+            </div>
+            
+            <div class="control-card">
+                <span class="control-icon">🚀</span>
+                <h3 class="control-title">Relay Control</h3>
+                <p class="control-description">Activate or deactivate the NFC relay attack system</p>
+                <button class="cyber-button btn-primary" onclick="toggleRelay()" id="relay-btn">
+                    ACTIVATE RELAY
+                </button>
+            </div>
+        </div>
+        
+        <!-- Data Visualization -->
+        <div class="data-viz">
+            <h3 style="font-family: 'Orbitron', sans-serif; margin-bottom: 1rem;">DATA STREAM VISUALIZATION</h3>
+            <div class="data-stream">
+                <div class="wave-container">
+                    <svg class="wave" viewBox="0 0 1000 200" preserveAspectRatio="none">
+                        <path class="wave-path" id="wave1" d="M0,100 Q250,50 500,100 T1000,100 Q1250,150 1500,100 T2000,100" />
+                        <path class="wave-path" id="wave2" d="M0,100 Q250,150 500,100 T1000,100 Q1250,50 1500,100 T2000,100" style="stroke: var(--primary-color); animation-delay: -1.5s;" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Terminal Log -->
+        <div class="terminal">
+            <div class="terminal-content" id="log-container"></div>
+        </div>
+    </div>
+    
+    <!-- Alert Container -->
+    <div class="alert-container" id="alert-container"></div>
+    
+    <script>
+        // Global Variables
+        let relayActive = false;
+        let packetCount = 0;
+        let startTime = Date.now();
+        let socket = null;
+        
+        // Initialize Socket.IO
+        function initSocket() {
+            socket = io();
+            
+            socket.on('connect', function() {
+                addLog('Connected to server', 'success');
+            });
+            
+            socket.on('disconnect', function() {
+                addLog('Disconnected from server', 'error');
+            });
+        }
+        
+        // Initialize Particles
+        function createParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 15 + 's';
+                particle.style.animationDuration = (15 + Math.random() * 10) + 's';
+                container.appendChild(particle);
+            }
+        }
+        
+        // Terminal Logging
+        function addLog(message, type = 'info') {
+            const container = document.getElementById('log-container');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString('es-ES', { hour12: false });
+            
+            let prefix = '[INFO]';
+            if (type === 'success') prefix = '[SUCCESS]';
+            if (type === 'error') prefix = '[ERROR]';
+            
+            entry.textContent = `${timestamp} ${prefix} ${message}`;
+            container.insertBefore(entry, container.firstChild);
+            
+            // Keep only last 100 entries
+            while (container.children.length > 100) {
+                container.removeChild(container.lastChild);
+            }
+            
+            // Auto scroll to top
+            container.scrollTop = 0;
+        }
+        
+        // Alert System
+        function showAlert(message, type = 'info') {
+            const container = document.getElementById('alert-container');
+            const alert = document.createElement('div');
+            alert.className = `alert ${type}`;
+            alert.textContent = message;
+            
+            container.appendChild(alert);
+            
+            // Trigger show animation
+            setTimeout(() => alert.classList.add('show'), 10);
+            
+            // Remove after 4 seconds
+            setTimeout(() => {
+                alert.classList.remove('show');
+                setTimeout(() => alert.remove(), 500);
+            }, 4000);
+        }
+        
+        // Update Uptime
+        function updateUptime() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const hours = Math.floor(elapsed / 3600);
+            const minutes = Math.floor((elapsed % 3600) / 60);
+            const seconds = elapsed % 60;
+            
+            document.getElementById('uptime').textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        // Update Status
+        async function updateStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                // Update relay status
+                relayActive = data.active;
+                const relayIndicator = document.getElementById('relay-indicator');
+                const relayStatus = document.getElementById('relay-status');
+                const relayBtn = document.getElementById('relay-btn');
+                
+                if (data.active) {
+                    relayIndicator.className = 'pulse-indicator active';
+                    relayStatus.textContent = 'ONLINE';
+                    relayBtn.textContent = 'DEACTIVATE RELAY';
+                    relayBtn.className = 'cyber-button btn-danger';
+                } else {
+                    relayIndicator.className = 'pulse-indicator inactive';
+                    relayStatus.textContent = 'OFFLINE';
+                    relayBtn.textContent = 'ACTIVATE RELAY';
+                    relayBtn.className = 'cyber-button btn-primary';
+                }
+                
+                // Update MQTT status
+                const mqttIndicator = document.getElementById('mqtt-indicator');
+                const mqttStatus = document.getElementById('mqtt-status');
+                
+                if (data.mqtt_connected) {
+                    mqttIndicator.className = 'pulse-indicator active';
+                    mqttStatus.textContent = 'CONNECTED';
+                } else {
+                    mqttIndicator.className = 'pulse-indicator inactive';
+                    mqttStatus.textContent = 'DISCONNECTED';
+                }
+                
+                // Simulate packet count for demonstration
+                if (data.active && data.mqtt_connected) {
+                    packetCount += Math.floor(Math.random() * 5) + 1;
+                    document.getElementById('packet-count').textContent = packetCount;
+                    
+                    // Update wave animation speed based on activity
+                    document.querySelectorAll('.wave-path').forEach(path => {
+                        path.style.animationDuration = '1.5s';
+                    });
+                } else {
+                    document.querySelectorAll('.wave-path').forEach(path => {
+                        path.style.animationDuration = '3s';
+                    });
+                }
+                
+            } catch (error) {
+                console.error('Status update error:', error);
+                addLog('Failed to update status', 'error');
+            }
+        }
+        
+        // Open Flash Wizard
+        function openFlashWizard() {
+            addLog('Opening Arduino Flash Wizard...', 'info');
+            showAlert('Redirecting to Flash Wizard...', 'info');
+            
+            // Open wizard in new tab/window
+            window.open('/wizard', '_blank');
+            
+            // Or redirect in same window:
+            // window.location.href = '/wizard';
+        }
+        
+        // Toggle Relay
+        async function toggleRelay() {
+            const btn = document.getElementById('relay-btn');
+            btn.disabled = true;
+            
+            const action = relayActive ? 'Deactivating' : 'Activating';
+            const endpoint = relayActive ? '/api/relay/stop' : '/api/relay/start';
+            
+            addLog(`${action} NFC relay system...`, 'info');
+            btn.innerHTML = `${action.toUpperCase()}<span class="loader"></span>`;
+            
+            try {
+                const response = await fetch(endpoint, { method: 'POST' });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    const message = relayActive ? 'Relay deactivated' : 'Relay activated';
+                    showAlert(message, 'success');
+                    addLog(`${message} successfully`, 'success');
+                    
+                    // Visual feedback
+                    if (!relayActive) {
+                        document.querySelector('.bg-animation').style.animationDuration = '10s';
+                    } else {
+                        document.querySelector('.bg-animation').style.animationDuration = '20s';
+                    }
+                    
+                    updateStatus();
+                } else {
+                    showAlert(`Error: ${result.message || 'Unknown error'}`, 'error');
+                    addLog(`Operation failed: ${result.message || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                showAlert('Connection error', 'error');
+                addLog(`Connection error: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                updateStatus();
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            createParticles();
+            initSocket();
+            addLog('System initialized', 'success');
+            addLog('Bombercat NFC Relay Interface v3.0 loaded', 'info');
+            addLog('Click "START FLASH WIZARD" to configure your device', 'info');
+            
+            updateStatus();
+            setInterval(updateStatus, 2000);
+            setInterval(updateUptime, 1000);
+            
+            // Add some initial fancy logs
+            setTimeout(() => addLog('System ready for operations', 'success'), 1000);
+        });
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'r':
+                        e.preventDefault();
+                        toggleRelay();
+                        break;
+                    case 'f':
+                        e.preventDefault();
+                        openFlashWizard();
+                        break;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
