@@ -1,0 +1,146 @@
+/* BomberCat Wizard - Global Styles */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap');
+
+/* CSS Variables */
+:root {
+    --primary-color: #ff006e;
+    --secondary-color: #8338ec;
+    --accent-color: #3a86ff;
+    --success-color: #06ffa5;
+    --danger-color: #ff006e;
+    --warning-color: #ffb700;
+    --bg-dark: #0a0a0a;
+    --bg-card: rgba(20, 20, 20, 0.8);
+    --text-primary: #ffffff;
+    --text-secondary: #a8a8a8;
+}
+
+/* Global Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Body Styles */
+body {
+    font-family: 'Space Mono', monospace;
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    overflow-x: hidden;
+    position: relative;
+    min-height: 100vh;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, var(--primary-color), var(--secondary-color));
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, var(--secondary-color), var(--accent-color));
+}
+
+/* Global Animations */
+@keyframes glow {
+    from { filter: drop-shadow(0 0 20px rgba(255, 0, 110, 0.5)); }
+    to { filter: drop-shadow(0 0 30px rgba(131, 56, 236, 0.8)); }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(6, 255, 165, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 15px rgba(6, 255, 165, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(6, 255, 165, 0);
+    }
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+@keyframes terminalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes backgroundShift {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(70px, 70px); }
+}
+
+/* Utility Classes */
+.hidden {
+    display: none !important;
+}
+
+.center-container {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .logo {
+        font-size: 2.5rem;
+    }
+    
+    .wizard-steps {
+        flex-wrap: wrap;
+    }
+    
+    .main-container {
+        padding: 1rem;
+    }
+    
+    .device-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .back-button {
+        position: static;
+        margin-bottom: 2rem;
+    }
+}

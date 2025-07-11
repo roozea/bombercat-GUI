@@ -1,0 +1,13 @@
+/* Estilos específicos extraídos de elementos inline en index.html */
+
+/* Títulos de secciones */
+.section-title {
+    font-family: 'Orbitron', sans-serif;
+    margin-bottom: 1rem;
+}
+
+/* Estilos específicos para elementos SVG */
+.wave-path-delayed {
+    stroke: var(--primary-color);
+    animation-delay: -1.5s;
+}

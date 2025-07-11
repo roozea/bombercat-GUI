@@ -1,26 +1,11 @@
 #!/usr/bin/env python3
 """
-BomberCat Complete Installation Script
-Installs EVERYTHING including problematic libraries
+BomberCat Firmware Selector v2 - WITH ESP32 FIX
+Choose firmware and board type
 """
+from pathlib import Path
 import subprocess
 import sys
-import os
-from pathlib import Path
-
-def run_command(cmd, check=True):
-    """Run command and return result"""
-    print(f"Running: {' '.join(cmd)}")
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    
-    if result.stdout:
-        print(result.stdout)
-    
-    if check and result.returncode != 0:
-        print(f"Error: {result.stderr}")
-        return False
-    
-    return True
 
 def find_arduino_cli():
     """Find Arduino CLI"""
@@ -42,155 +27,135 @@ def find_arduino_cli():
     
     return None
 
+def install_esp32_core(cli):
+    """Install ESP32 core"""
+    print("\n📦 Installing ESP32 core...")
+    
+    # Check if already installed
+    result = subprocess.run([cli, "core", "list"], capture_output=True, text=True)
+    if "esp32:esp32" in result.stdout:
+        print("✅ ESP32 core already installed")
+        return True
+    
+    # Install
+    result = subprocess.run([cli, "core", "install", "esp32:esp32"], capture_output=True, text=True)
+    if result.returncode == 0:
+        print("✅ ESP32 core installed successfully")
+        return True
+    else:
+        print("❌ Failed to install ESP32 core")
+        if result.stderr:
+            print(result.stderr)
+        return False
+
 def main():
     print("""
-╔══════════════════════════════════════════════════════════╗
-║   🚀 BOMBERCAT COMPLETE INSTALLATION 🚀                 ║
-╚══════════════════════════════════════════════════════════╝
+╔══════════════════════════════════════════════╗
+║      🔥 BOMBERCAT FIRMWARE SELECTOR V2 🔥     ║
+╚══════════════════════════════════════════════╝
 
-This will install EVERYTHING including:
-- All standard libraries
-- Electronic Cats libraries
-- Platform-specific libraries
-- Alternative library names
+Select your firmware and board type:
+
+1️⃣  HOST on ARM mbed (original BomberCat)
+    • For Electronic Cats BomberCat RP2040
+    • Uses PN7150 NFC chip
+    
+2️⃣  CLIENT on ESP32 (RECOMMENDED) ✨
+    • For ESP32-based boards
+    • Uses PN532 NFC chip
+    • Better compatibility
+    
+3️⃣  AUTO DETECT
+    • Let the system decide
+    
+4️⃣  EXAMPLE firmware (always works)
+    • Simple NFC reader example
+    • Works on any ESP32
+    
+5️⃣  FORCE CLIENT + ESP32 setup
+    • Ensures everything is set for ESP32
+    • Installs ESP32 core
+    • Best for fixing errors
+
+════════════════════════════════════════════════
 """)
     
-    cli = find_arduino_cli()
-    if not cli:
-        print("❌ Arduino CLI not found!")
-        print("Run: python bombercat_relay.py")
-        return 1
+    choice = input("Enter your choice (1-5): ").strip()
     
-    print(f"✅ Found Arduino CLI: {cli}")
+    sketch_dir = Path("sketch")
+    sketch_dir.mkdir(exist_ok=True)
     
-    # Add all board URLs
-    print("\n📡 Adding board URLs...")
-    urls = [
-        "https://espressif.github.io/arduino-esp32/package_esp32_index.json",
-        "https://electroniccats.github.io/Arduino_Boards_Index/package_electroniccats_index.json",
-        "https://raw.githubusercontent.com/damellis/attiny/ide-1.6.x-boards-manager/package_damellis_attiny_index.json"
-    ]
+    relay_pref_file = sketch_dir / "relay_preference.txt"
+    board_pref_file = sketch_dir / "board_preference.txt"
     
-    for url in urls:
-        run_command([cli, "config", "add", "board_manager.additional_urls", url], check=False)
-    
-    # Update index
-    print("\n📥 Updating indexes...")
-    run_command([cli, "core", "update-index"])
-    
-    # Install cores
-    print("\n🎯 Installing cores...")
-    cores = ["esp32:esp32", "arduino:avr"]
-    
-    for core in cores:
-        print(f"Installing {core}...")
-        run_command([cli, "core", "install", core], check=False)
-    
-    # Comprehensive library list
-    all_libraries = [
-        # Standard libraries
-        "WiFiManager",
-        "PubSubClient", 
-        "ArduinoJson",
-        "WiFiNINA",
+    if choice == "1":
+        # HOST on ARM mbed
+        relay_pref_file.write_text("host")
+        board_pref_file.write_text("electroniccats:mbed_rp2040:bombercat")
+        print("\n✅ Selected: HOST firmware on ARM mbed")
+        print("⚠️  Make sure you have the Electronic Cats board package installed!")
         
-        # NFC/RFID - Multiple variants
-        "Adafruit PN532",
-        "PN532",
-        "RFID",
-        "MFRC522",
+    elif choice == "2":
+        # CLIENT on ESP32
+        relay_pref_file.write_text("client")
+        board_pref_file.write_text("esp32:esp32:esp32")
+        print("\n✅ Selected: CLIENT firmware on ESP32")
+        print("This is the recommended option!")
         
-        # Electronic Cats PN7150 - Try ALL variants
-        "ElectronicCats-PN7150",
-        "ElectronicCats PN7150",
-        "Electronic Cats PN7150",
-        "PN7150",
-        "Electroniccats_PN7150",
+    elif choice == "3":
+        # AUTO
+        relay_pref_file.write_text("auto")
+        if board_pref_file.exists():
+            board_pref_file.unlink()
+        print("\n✅ Selected: AUTO detection")
         
-        # NDEF variants
-        "NDEF Library",
-        "NDEF",
-        "NDEF-1",
-        "Seeed_Arduino_NFC_NDEF",
-        "Don Coleman NDEF",
+    elif choice == "4":
+        # EXAMPLE
+        relay_pref_file.write_text("example")
+        board_pref_file.write_text("esp32:esp32:esp32")
+        print("\n✅ Selected: EXAMPLE firmware on ESP32")
+        print("This will create a simple working example")
         
-        # Serial Command variants
-        "SerialCommand",
-        "Arduino-SerialCommand",
-        "SerialCommand-ng",
-        "ppedro74 SerialCommand",
+    elif choice == "5":
+        # FORCE CLIENT + ESP32
+        print("\n🔧 Setting up ESP32 environment...")
         
-        # Servo variants
-        "ESP32Servo",
-        "ESP32_Servo",
-        "ServoESP32",
-        "Servo",
-        
-        # LED libraries
-        "FastLED",
-        "Adafruit NeoPixel",
-        "WS2812FX",
-        
-        # Additional
-        "Keyboard",
-        "Mouse",
-        "SD",
-        "SPI",
-        "Wire",
-        
-        # Storage (for mbed compatibility attempt)
-        "SD_MMC",
-        "SPIFFS",
-        
-        # Communication
-        "HTTPClient",
-        "WebServer",
-        "ESPAsyncWebServer",
-        "AsyncTCP"
-    ]
-    
-    print(f"\n📚 Installing {len(all_libraries)} libraries...")
-    print("This will take a while...\n")
-    
-    success = 0
-    failed = []
-    
-    for i, lib in enumerate(all_libraries, 1):
-        print(f"[{i}/{len(all_libraries)}] Installing: {lib}...", end=" ")
-        
-        result = subprocess.run(
-            [cli, "lib", "install", lib],
-            capture_output=True,
-            text=True
-        )
-        
-        if result.returncode == 0:
-            print("✅")
-            success += 1
+        # Find Arduino CLI
+        cli = find_arduino_cli()
+        if cli:
+            print(f"Found Arduino CLI: {cli}")
+            install_esp32_core(cli)
         else:
-            print("❌")
-            failed.append(lib)
+            print("⚠️  Arduino CLI not found, but preferences will be saved")
+        
+        relay_pref_file.write_text("client")
+        board_pref_file.write_text("esp32:esp32:esp32")
+        
+        print("\n✅ FORCED: CLIENT firmware on ESP32")
+        print("✅ ESP32 core installed (if Arduino CLI found)")
+        print("✅ All settings configured for ESP32")
+        
+    else:
+        print("\n❌ Invalid choice")
+        return
     
-    # Try git clone for failed Electronic Cats libraries
-    if any("PN7150" in lib for lib in failed):
-        print("\n🔧 Trying manual git clone for PN7150...")
-        
-        arduino_libs = Path.home() / "Documents" / "Arduino" / "libraries"
-        arduino_libs.mkdir(parents=True, exist_ok=True)
-        
-        repos = [
-            ("https://github.com/ElectronicCats/ElectronicCats-PN7150.git", "ElectronicCats-PN7150"),
-            ("https://github.com/ElectronicCats/NDEF.git", "NDEF_ElectronicCats")
-        ]
-        
-        for repo_url, folder_name in repos:
-            target = arduino_libs / folder_name
-            if not target.exists():
-                print(f"Cloning {repo_url}...")
-                result = subprocess.run(
-                    ["git", "clone", repo_url, str(target)],
-                    capture_output=True,
-                    text=True
-                )
-                if result.returncode == 0:
-                    print(f"✅ Cloned to {target}")
+    print("\n" + "="*50)
+    print("\n📋 Next Steps:")
+    print("1. Go back to http://localhost:8081")
+    print("2. Click 'START FLASH WIZARD'")
+    print("3. The correct firmware and board will be used")
+    
+    if choice in ["2", "4", "5"]:
+        print("\n💡 ESP32 Wiring Guide:")
+        print("For PN532 (CLIENT firmware):")
+        print("  • SDA → GPIO 21")
+        print("  • SCL → GPIO 22")
+        print("  • VCC → 3.3V (NOT 5V!)")
+        print("  • GND → GND")
+        print("  • IRQ → GPIO 2 (optional)")
+        print("  • RST → GPIO 3 (optional)")
+    
+    print("\nHappy hacking! 🔥")
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,301 @@
+/* BomberCat Wizard - Terminal Styles */
+
+/* Flash Terminal */
+.flash-terminal {
+    background: #0a0a0a;
+    border: 2px solid var(--accent-color);
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-top: 2rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    max-height: 400px;
+    overflow-y: auto;
+    position: relative;
+}
+
+.flash-terminal::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent-color), var(--success-color));
+    border-radius: 15px 15px 0 0;
+}
+
+.terminal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.terminal-title {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    color: var(--accent-color);
+    font-size: 1rem;
+}
+
+.terminal-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.terminal-control {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.terminal-control.close {
+    background: #ff5f56;
+}
+
+.terminal-control.minimize {
+    background: #ffbd2e;
+}
+
+.terminal-control.maximize {
+    background: #27ca3f;
+}
+
+.terminal-control:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 10px currentColor;
+}
+
+.terminal-output {
+    color: #00ff00;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.terminal-line {
+    margin-bottom: 0.2rem;
+    animation: terminalFadeIn 0.3s ease-out;
+}
+
+.terminal-prompt {
+    color: var(--accent-color);
+    font-weight: 700;
+}
+
+.terminal-command {
+    color: #ffffff;
+}
+
+.terminal-success {
+    color: var(--success-color);
+}
+
+.terminal-error {
+    color: var(--danger-color);
+}
+
+.terminal-warning {
+    color: var(--warning-color);
+}
+
+.terminal-info {
+    color: var(--accent-color);
+}
+
+.terminal-cursor {
+    display: inline-block;
+    width: 8px;
+    height: 1.2em;
+    background: #00ff00;
+    animation: blink 1s infinite;
+    margin-left: 2px;
+}
+
+@keyframes blink {
+    0%, 50% {
+        opacity: 1;
+    }
+    51%, 100% {
+        opacity: 0;
+    }
+}
+
+/* Terminal Progress Indicators */
+.terminal-progress {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.5rem 0;
+}
+
+.terminal-progress-bar {
+    flex: 1;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.terminal-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-color), var(--success-color));
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 2px;
+}
+
+.terminal-progress-text {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    min-width: 40px;
+    text-align: right;
+}
+
+/* Terminal Scrollbar */
+.flash-terminal::-webkit-scrollbar {
+    width: 8px;
+}
+
+.flash-terminal::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.flash-terminal::-webkit-scrollbar-thumb {
+    background: var(--accent-color);
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.flash-terminal::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color);
+}
+
+/* Terminal Auto-scroll Indicator */
+.terminal-autoscroll {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    background: rgba(0, 0, 0, 0.8);
+    color: var(--accent-color);
+    padding: 0.3rem 0.6rem;
+    border-radius: 5px;
+    font-size: 0.7rem;
+    border: 1px solid var(--accent-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+.terminal-autoscroll.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.terminal-autoscroll:hover {
+    background: var(--accent-color);
+    color: black;
+}
+
+/* Terminal Status Indicators */
+.terminal-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.terminal-status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success-color);
+    animation: pulse 1.5s infinite;
+}
+
+.terminal-status-indicator.error {
+    background: var(--danger-color);
+}
+
+.terminal-status-indicator.warning {
+    background: var(--warning-color);
+}
+
+.terminal-status-indicator.info {
+    background: var(--accent-color);
+}
+
+.terminal-status-text {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+/* Terminal Command Input */
+.terminal-input-container {
+    display: flex;
+    align-items: center;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.terminal-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    outline: none;
+    padding: 0.5rem;
+}
+
+.terminal-input::placeholder {
+    color: var(--text-secondary);
+}
+
+/* Terminal Animation Effects */
+.terminal-typing::after {
+    content: '|';
+    animation: blink 1s infinite;
+    color: var(--accent-color);
+}
+
+.terminal-matrix {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    opacity: 0.1;
+    overflow: hidden;
+}
+
+.terminal-matrix-char {
+    position: absolute;
+    color: var(--success-color);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    animation: matrixFall 3s linear infinite;
+}
+
+@keyframes matrixFall {
+    0% {
+        transform: translateY(-100vh);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh);
+        opacity: 0;
+    }
+}

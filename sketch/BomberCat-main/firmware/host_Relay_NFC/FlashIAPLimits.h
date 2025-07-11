@@ -1,8 +1,8 @@
 // Ensures that this file is only included once
 
 // Platform compatibility defines
-#ifdef ESP32
-  #define BOMBERCAT_ESP32
+#ifdef ARDUINO_ARCH_RP2040
+  #define BOMBERCAT_RP2040
 #endif
 
 #ifdef ARDUINO_ARCH_MBED
@@ -14,7 +14,7 @@
 
 #include <Arduino.h>
 #include <FlashIAP.h>
-// #include <FlashIAPBlockDevice.h> // Commented out - incompatible with ESP32
+// #include <FlashIAPBlockDevice.h> // Commented out - incompatible with RP2040
 
 using namespace mbed;
 

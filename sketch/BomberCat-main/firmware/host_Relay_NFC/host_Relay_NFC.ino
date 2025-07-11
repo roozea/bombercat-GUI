@@ -2,8 +2,8 @@
 /************************************************************
 
 // Platform compatibility defines
-#ifdef ESP32
-  #define BOMBERCAT_ESP32
+#ifdef ARDUINO_ARCH_RP2040
+  #define BOMBERCAT_RP2040
 #endif
 
 #ifdef ARDUINO_ARCH_MBED
@@ -54,8 +54,8 @@
 //Create a client ID
 char hostId[] = "BomberCatHost-CARD##";
 
-// #include <FlashIAPBlockDevice.h> // Commented out - incompatible with ESP32
-// #include <TDBStore.h> // Commented out - incompatible with ESP32
+// #include <FlashIAPBlockDevice.h> // Commented out - incompatible with RP2040
+// #include <TDBStore.h> // Commented out - incompatible with RP2040
 
 using namespace mbed;
 

@@ -1,0 +1,31 @@
+/* BomberCat Wizard - Main Stylesheet */
+/* This file imports all wizard-related stylesheets */
+
+/* Import all wizard stylesheets in the correct order */
+@import url('/static/styles/wizard-global.css');     /* Global styles, variables, and animations */
+@import url('/static/styles/wizard-layout.css');     /* Layout components (header, container, navigation) */
+@import url('/static/styles/wizard-components.css'); /* UI components (buttons, forms, alerts) */
+@import url('/static/styles/wizard-steps.css');      /* Step-specific styles */
+@import url('/static/styles/wizard-effects.css');    /* Visual effects (background, particles) */
+@import url('/static/styles/wizard-inline.css');     /* Inline styles for specific components */
+
+/* 
+ * Usage Instructions:
+ * 
+ * 1. Replace the <style> tag in wizard.html with:
+ *    <link rel="stylesheet" href="{{ url_for('static', filename='styles/wizard.css') }}">
+ * 
+ * 2. All styles are now organized in separate files:
+ *    - wizard-global.css: CSS variables, global styles, animations
+ *    - wizard-layout.css: Header, navigation, main container
+ *    - wizard-components.css: Buttons, forms, alerts, progress bars
+ *    - wizard-steps.css: Device detection, dependencies, configuration, flash
+ *    - wizard-effects.css: Background animations and particle effects
+ * 
+ * 3. To modify specific styles:
+ *    - Global changes: Edit wizard-global.css
+ *    - Layout changes: Edit wizard-layout.css
+ *    - Component changes: Edit wizard-components.css
+ *    - Step-specific changes: Edit wizard-steps.css
+ *    - Visual effects: Edit wizard-effects.css
+ */

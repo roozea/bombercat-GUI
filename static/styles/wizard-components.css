@@ -1,0 +1,326 @@
+/* BomberCat Wizard - UI Components */
+
+/* Buttons */
+.wizard-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 3rem;
+    gap: 1rem;
+}
+
+.cyber-button {
+    padding: 1rem 2rem;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    z-index: 1;
+}
+
+.cyber-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s ease;
+    z-index: -1;
+}
+
+.cyber-button:hover::before {
+    left: 100%;
+}
+
+.cyber-button:active {
+    transform: scale(0.98);
+}
+
+.cyber-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    box-shadow: 0 5px 20px rgba(255, 0, 110, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+    box-shadow: 0 8px 30px rgba(255, 0, 110, 0.5);
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #2a2a2a, #3a3a3a);
+    color: white;
+    border: 2px solid var(--accent-color);
+    box-shadow: 0 5px 20px rgba(58, 134, 255, 0.3);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    box-shadow: 0 8px 30px rgba(58, 134, 255, 0.5);
+    transform: translateY(-2px);
+}
+
+/* Form Components */
+.config-form {
+    max-width: 600px;
+    margin: 2rem auto;
+}
+
+.form-group {
+    margin-bottom: 2rem;
+}
+
+.form-label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--accent-color);
+}
+
+.form-input {
+    width: 100%;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: white;
+    font-family: 'Space Mono', monospace;
+    transition: all 0.3s ease;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 20px rgba(58, 134, 255, 0.2);
+}
+
+.form-help {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 0.3rem;
+}
+
+/* Progress Bar */
+.progress-container {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    height: 30px;
+    margin: 2rem 0;
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-color), var(--success-color));
+    width: 0%;
+    transition: width 0.5s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+    );
+    animation: shimmer 2s infinite;
+}
+
+.progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Loading Spinner */
+.loader {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    margin-left: 10px;
+    vertical-align: middle;
+}
+
+.loader::after {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    border-top-color: var(--accent-color);
+    animation: spin 0.8s linear infinite;
+}
+
+/* Device Grid and Cards */
+.device-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.device-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid transparent;
+    border-radius: 15px;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.device-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--accent-color);
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(58, 134, 255, 0.3);
+}
+
+.device-card.selected {
+    border-color: var(--success-color);
+    background: rgba(6, 255, 165, 0.1);
+}
+
+.device-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+    text-align: center;
+}
+
+.device-name {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.device-info {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.device-status {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--success-color);
+    box-shadow: 0 0 10px var(--success-color);
+    animation: pulse 1.5s infinite;
+}
+
+.no-devices-message {
+    text-align: center;
+    color: var(--text-secondary);
+    grid-column: 1/-1;
+    padding: 3rem;
+}
+
+/* Status Icons and Indicators */
+.status-icon {
+    font-size: 1.5rem;
+}
+
+.dependency-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Firmware Selector */
+.firmware-selector {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: rgba(58, 134, 255, 0.1);
+    border: 1px solid rgba(58, 134, 255, 0.3);
+    border-radius: 15px;
+}
+
+.firmware-selector-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    color: var(--accent-color);
+    text-align: center;
+}
+
+.firmware-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.firmware-option {
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid transparent;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.firmware-option:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--accent-color);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 20px rgba(58, 134, 255, 0.3);
+}
+
+.firmware-option.selected {
+    border-color: var(--success-color);
+    background: rgba(6, 255, 165, 0.1);
+    box-shadow: 0 5px 20px rgba(6, 255, 165, 0.3);
+}
+
+.firmware-option-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.firmware-option-name {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.firmware-option-desc {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}

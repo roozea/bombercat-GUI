@@ -1,0 +1,101 @@
+/* Estilos específicos extraídos de elementos inline en wizard.html */
+
+/* Títulos de secciones */
+.section-title {
+    font-family: 'Orbitron', sans-serif;
+    margin-bottom: 1rem;
+}
+
+/* Texto secundario */
+.text-secondary {
+    color: var(--text-secondary);
+}
+
+/* Texto de advertencia */
+.text-warning {
+    color: var(--warning-color);
+}
+
+/* Espaciado específico */
+.mb-1 {
+    margin-bottom: 1rem;
+}
+
+.mb-2 {
+    margin-bottom: 2rem;
+}
+
+/* Elementos ocultos por defecto */
+.hidden-step {
+    display: none;
+}
+
+/* Loader oculto */
+.loader-hidden {
+    display: none;
+}
+
+/* Selector de firmware */
+.firmware-selector-hidden {
+    display: none;
+}
+
+/* Contenedor de advertencia */
+.warning-container {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: rgba(255, 183, 0, 0.1);
+    border: 1px solid var(--warning-color);
+    border-radius: 10px;
+}
+
+.warning-text {
+    color: var(--warning-color);
+    font-size: 0.85rem;
+    text-align: center;
+    margin: 0;
+}
+
+/* Texto de descripción de firmware */
+.firmware-description {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin: 1rem 0;
+    text-align: center;
+}
+
+/* Texto pequeño de advertencia */
+.small-warning {
+    color: var(--warning-color);
+}
+
+/* Botón oculto */
+.btn-hidden {
+    display: none;
+}
+
+/* Texto de éxito */
+.success-text {
+    color: var(--success-color);
+}
+
+/* Terminal oculto */
+.terminal-hidden {
+    display: none;
+}
+
+/* Contenedor de advertencia del firmware */
+.firmware-warning-box {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: rgba(255, 183, 0, 0.1);
+    border: 1px solid var(--warning-color);
+    border-radius: 10px;
+}
+
+.firmware-warning-text {
+    color: var(--warning-color);
+    font-size: 0.85rem;
+    text-align: center;
+    margin: 0;
+}
