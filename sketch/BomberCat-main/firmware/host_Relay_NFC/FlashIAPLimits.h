@@ -13,7 +13,7 @@
 #pragma once 
 
 #include <Arduino.h>
-#include <FlashIAP.h>
+// #include <FlashIAP.h> // Commented out - incompatible with RP2040
 // #include <FlashIAPBlockDevice.h> // Commented out - incompatible with RP2040
 
 using namespace mbed;

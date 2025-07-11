@@ -2,3 +2,4 @@ PN7150
 FlashIAPBlockDevice
 TDBStore
 mbed
+FlashIAP

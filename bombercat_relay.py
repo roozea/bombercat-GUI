@@ -31,44 +31,44 @@ class Config:
     # Arduino CLI Settings
     arduino_cli_version: str = "0.35.3"
     arduino_cli_path: str = ""
-    arduino_fqbn: str = "rp2040:rp2040:rpipico"  # FQBN for RP2040
-    
+    arduino_fqbn: str = "electroniccats:rp2040:bombercat"  # FQBN for BomberCat with Electronic Cats RP2040 core
+
     # BomberCat Repository
     repo_owner: str = "ElectronicCats"
     repo_name: str = "BomberCat"
     firmware_path: str = "firmware"
-    
+
     # Build Settings
     build_dir: str = "build"
     sketch_dir: str = "sketch"
-    
+
     # Board Manager URLs
     board_urls: List[str] = field(default_factory=lambda: [
         "https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json",
         "https://electroniccats.github.io/Arduino_Boards_Index/package_electroniccats_index.json"
     ])
-    
+
     # Libraries to install
     required_libraries: List[str] = field(default_factory=lambda: [
         # Core Libraries
         "WiFiManager",
         "PubSubClient",
         "ArduinoJson",
-        
+
         # NFC/RFID Libraries
         "Adafruit PN532",
         "ElectronicCats-PN7150",
         "NDEF Library",
-        
+
         # Communication
         "WiFiNINA",
         "SerialCommand",
-        
+
         # Hardware Control
         "Servo",
         "FastLED",
         "Adafruit NeoPixel",
-        
+
         # Additional
         "Keyboard",
         "Mouse",
@@ -76,14 +76,14 @@ class Config:
         "SPI",
         "Wire"
     ])
-    
+
     # Alternative library names
     library_alternatives: Dict[str, List[str]] = field(default_factory=lambda: {
         "SerialCommand": ["Arduino-SerialCommand", "SerialCommand-ng"],
         "NDEF Library": ["NDEF", "NDEF-1", "Seeed_Arduino_NFC_NDEF"],
         "ElectronicCats-PN7150": ["ElectronicCats PN7150", "Electronic Cats PN7150", "PN7150"]
     })
-    
+
     # Libraries that are platform-specific
     incompatible_libraries: List[str] = field(default_factory=lambda: [
         "FlashIAPBlockDevice.h",
@@ -93,13 +93,44 @@ class Config:
         "rtos.h",
         "mbed_events.h"
     ])
-    
+
+    def load_skip_libraries(self):
+        """Load additional libraries to skip from skip_problematic_libs.txt"""
+        skip_file = Path("sketch/skip_problematic_libs.txt")
+        if skip_file.exists():
+            try:
+                with open(skip_file, 'r') as f:
+                    skip_libs = [line.strip() for line in f.readlines() if line.strip()]
+
+                # Add .h extension if not present and convert to include format
+                for lib in skip_libs:
+                    if not lib.endswith('.h'):
+                        lib_header = f"{lib}.h"
+                    else:
+                        lib_header = lib
+
+                    if lib_header not in self.incompatible_libraries:
+                        self.incompatible_libraries.append(lib_header)
+
+                    # Also add the raw library name for broader matching
+                    if lib not in self.incompatible_libraries:
+                        self.incompatible_libraries.append(lib)
+
+                print(f"Loaded {len(skip_libs)} additional libraries to skip: {skip_libs}")
+                return True
+            except Exception as e:
+                print(f"Error loading skip_problematic_libs.txt: {e}")
+        return False
+
     # Flask Settings
     flask_host: str = "0.0.0.0"
     flask_port: int = 8081
     flask_debug: bool = False
 
 config = Config()
+
+# Load additional libraries to skip from skip_problematic_libs.txt
+config.load_skip_libraries()
 
 # Create Flask app with SocketIO
 app = Flask(__name__, template_folder='templates')
@@ -120,7 +151,7 @@ class ArduinoCLI:
         self.socketio = socketio
         self.cli_path = None
         self.initialized = False
-        
+
     def emit_log(self, message, level="info"):
         """Emit log message to web interface"""
         try:
@@ -132,19 +163,19 @@ class ArduinoCLI:
             print(f"[{level.upper()}] {message}")
         except Exception as e:
             print(f"Error emitting log: {e}")
-    
+
     def emit_progress(self, progress):
         """Emit progress update"""
         try:
             self.socketio.emit('flash_progress', {'progress': progress}, room=None)
         except Exception as e:
             print(f"Error emitting progress: {e}")
-    
+
     def get_platform_info(self):
         """Get platform-specific Arduino CLI download info"""
         system = platform.system().lower()
         machine = platform.machine().lower()
-        
+
         if system == "windows":
             return "Windows_64bit", "arduino-cli.exe", ".zip"
         elif system == "darwin":
@@ -159,32 +190,32 @@ class ArduinoCLI:
                 return "Linux_64bit", "arduino-cli", ".tar.gz"
         else:
             raise Exception(f"Unsupported platform: {system}")
-    
+
     def download_arduino_cli(self):
         """Download and install Arduino CLI"""
         self.emit_log("Downloading Arduino CLI...")
         self.emit_progress(5)
-        
+
         platform_name, exe_name, ext = self.get_platform_info()
-        
+
         # Download URL
         base_url = "https://downloads.arduino.cc/arduino-cli"
         filename = f"arduino-cli_{config.arduino_cli_version}_{platform_name}{ext}"
         url = f"{base_url}/{filename}"
-        
+
         # Download file
         response = requests.get(url, stream=True)
         response.raise_for_status()
-        
+
         tools_dir = Path("tools")
         tools_dir.mkdir(exist_ok=True)
-        
+
         archive_path = tools_dir / filename
-        
+
         # Save archive
         total_size = int(response.headers.get('content-length', 0))
         downloaded = 0
-        
+
         with open(archive_path, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
@@ -192,10 +223,10 @@ class ArduinoCLI:
                 if total_size:
                     progress = 5 + int((downloaded / total_size) * 10)
                     self.emit_progress(progress)
-        
+
         # Extract archive
         self.emit_log("Extracting Arduino CLI...")
-        
+
         if ext == ".zip":
             with zipfile.ZipFile(archive_path, 'r') as zip_ref:
                 zip_ref.extractall(tools_dir)
@@ -203,29 +234,29 @@ class ArduinoCLI:
             import tarfile
             with tarfile.open(archive_path, 'r:gz') as tar_ref:
                 tar_ref.extractall(tools_dir)
-        
+
         # Find arduino-cli executable
         self.cli_path = str(tools_dir / exe_name)
-        
+
         # Make executable on Unix
         if platform.system() != "Windows":
             os.chmod(self.cli_path, 0o755)
-        
+
         # Clean up archive
         archive_path.unlink()
-        
+
         self.emit_log("Arduino CLI installed successfully", "success")
         self.emit_progress(15)
-        
+
         return True
-    
+
     def run_command(self, *args, **kwargs):
         """Run Arduino CLI command"""
         args = [str(arg) for arg in args if arg is not None]
         cmd = [self.cli_path] + args
-        
+
         self.emit_log(f"Running: {' '.join(cmd)}", "info")
-        
+
         try:
             result = subprocess.run(
                 cmd,
@@ -233,10 +264,10 @@ class ArduinoCLI:
                 text=True,
                 **kwargs
             )
-            
+
             is_board_list = "board" in args and "list" in args
             max_lines = 10 if is_board_list else 100
-            
+
             if result.stdout:
                 lines = result.stdout.strip().split('\n')
                 for i, line in enumerate(lines):
@@ -245,7 +276,7 @@ class ArduinoCLI:
                         break
                     if line:
                         self.emit_log(line, "info")
-            
+
             if result.stderr:
                 lines = result.stderr.strip().split('\n')
                 for i, line in enumerate(lines):
@@ -254,7 +285,7 @@ class ArduinoCLI:
                         break
                     if line:
                         self.emit_log(line, "warning")
-            
+
             if result.returncode != 0:
                 if "config init" in ' '.join(args) and "already exists" in result.stderr:
                     self.emit_log("Config already initialized", "info")
@@ -267,29 +298,29 @@ class ArduinoCLI:
                     if result.stderr:
                         error_msg += f": {result.stderr.strip()[:200]}"
                     raise Exception(error_msg)
-            
+
             return result
-            
+
         except Exception as e:
             self.emit_log(f"Command error: {str(e)}", "error")
             raise
-    
+
     def initialize(self):
         """Initialize Arduino CLI"""
         if self.initialized:
             return True
-        
+
         self.emit_log("Initializing Arduino CLI...")
-        
+
         # Check if Arduino CLI exists
         if not self.cli_path or not os.path.exists(self.cli_path):
             self.download_arduino_cli()
-        
+
         # Create Arduino CLI config directory
         home_dir = Path.home()
         arduino_dir = home_dir / ".arduino15"
         arduino_dir.mkdir(exist_ok=True)
-        
+
         # Initialize configuration
         config_file = arduino_dir / "arduino-cli.yaml"
         if not config_file.exists():
@@ -299,14 +330,14 @@ class ArduinoCLI:
                 self.emit_log(f"Config init warning: {e}", "warning")
         else:
             self.emit_log("Arduino CLI config already exists", "info")
-        
+
         # Add board manager URLs
         for url in config.board_urls:
             try:
                 self.run_command("config", "add", "board_manager.additional_urls", url)
             except Exception as e:
                 self.emit_log(f"Board URL already added or error: {e}", "warning")
-        
+
         # Update core index
         self.emit_log("Updating board definitions...")
         self.emit_progress(20)
@@ -314,15 +345,15 @@ class ArduinoCLI:
             self.run_command("core", "update-index")
         except Exception as e:
             self.emit_log(f"Core update warning: {e}", "warning")
-        
+
         self.initialized = True
         return True
-    
+
     def install_core(self, core_name="rp2040:rp2040"):
         """Install board core"""
         self.emit_log(f"Installing {core_name} core...")
         self.emit_progress(25)
-        
+
         try:
             # Check if already installed
             result = self.run_command("core", "list")
@@ -330,7 +361,7 @@ class ArduinoCLI:
                 self.emit_log(f"{core_name} core already installed", "success")
                 self.emit_progress(35)
                 return
-            
+
             # Install the core
             self.run_command("core", "install", core_name)
             self.emit_log(f"{core_name} core installed", "success")
@@ -342,21 +373,21 @@ class ArduinoCLI:
             else:
                 self.emit_log(f"Core installation error: {e}", "error")
                 raise
-    
+
     def install_libraries(self):
         """Install required libraries"""
         self.emit_log("Installing required libraries...")
         self.emit_progress(40)
-        
+
         total_libs = len(config.required_libraries)
         installed_count = 0
         failed_libs = []
-        
+
         for i, lib in enumerate(config.required_libraries):
             self.emit_log(f"Installing library: {lib}")
-            
+
             installed = False
-            
+
             # Check if already installed
             try:
                 result = self.run_command("lib", "list")
@@ -366,7 +397,7 @@ class ArduinoCLI:
                     installed_count += 1
             except:
                 pass
-            
+
             if not installed:
                 # Try primary name
                 try:
@@ -387,32 +418,32 @@ class ArduinoCLI:
                                 break
                             except:
                                 continue
-                    
+
                     if not installed:
                         self.emit_log(f"Warning: Failed to install {lib}: {e}", "warning")
                         failed_libs.append(lib)
-            
+
             progress = 40 + int((i + 1) / total_libs * 10)
             self.emit_progress(progress)
-        
+
         if failed_libs:
             self.emit_log(f"Installed {installed_count}/{total_libs} libraries", "warning")
             self.emit_log(f"Failed libraries: {', '.join(failed_libs)}", "warning")
         else:
             self.emit_log("All libraries installed successfully", "success")
-        
+
         self.emit_progress(50)
-    
+
     def detect_boards(self):
         """Detect connected boards"""
         self.emit_log("Detecting connected boards...")
-        
+
         try:
             result = self.run_command("board", "list")
-            
+
             bombercat_boards = []
             lines = result.stdout.strip().split('\n')
-            
+
             for line in lines[1:]:
                 if line.strip():
                     parts = line.split()
@@ -424,25 +455,25 @@ class ArduinoCLI:
                                 'fqbn': 'rp2040:rp2040:rpipico',
                                 'name': 'RP2040 Device'
                             }
-                            
+
                             try:
                                 if len(parts) > 4:
                                     name_parts = [p for p in parts[3:-2] if p is not None]
                                     if name_parts:
                                         board_info['name'] = ' '.join(name_parts)
-                                    
+
                                     if 'rp2040' in line.lower() and len(parts) > 5:
                                         board_info['fqbn'] = parts[-2]
                             except Exception as e:
                                 self.emit_log(f"Warning parsing board info: {e}", "warning")
-                            
+
                             bombercat_boards.append(board_info)
-            
+
             if not bombercat_boards:
                 self.emit_log("No boards detected via Arduino CLI, using serial port detection", "warning")
-            
+
             return bombercat_boards
-            
+
         except Exception as e:
             self.emit_log(f"Board detection error: {e}", "error")
             return []
@@ -453,44 +484,44 @@ class FirmwareManager:
         self.arduino = arduino_cli
         self.socketio = socketio
         self.sketch_path = None
-        
+
     def download_firmware(self):
         """Download firmware from GitHub"""
         self.arduino.emit_log("Downloading BomberCat firmware from GitHub...")
         self.arduino.emit_progress(55)
-        
+
         sketch_dir = Path(config.sketch_dir)
         sketch_dir.mkdir(exist_ok=True)
-        
+
         zip_url = f"https://github.com/{config.repo_owner}/{config.repo_name}/archive/refs/heads/main.zip"
-        
+
         try:
             response = requests.get(zip_url, stream=True)
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
             self.arduino.emit_log(f"Error downloading firmware: {e}", "error")
             return self.create_example_firmware()
-        
+
         zip_path = sketch_dir / "bombercat.zip"
-        
+
         with open(zip_path, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
-        
+
         self.arduino.emit_log("Extracting firmware...")
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(sketch_dir)
-        
+
         extracted_dir = sketch_dir / f"{config.repo_name}-main"
         firmware_dir = extracted_dir / "firmware"
-        
+
         self.arduino.emit_log("Looking for firmware files...", "info")
-        
+
         preference_file = sketch_dir / "relay_preference.txt"
         selected_firmware = None
         if preference_file.exists():
             selected_firmware = preference_file.read_text().strip().lower()
-        
+
         available_firmwares = []
         if firmware_dir.exists():
             for subdir in firmware_dir.iterdir():
@@ -503,7 +534,7 @@ class FirmwareManager:
                             'ino_file': ino_files[0].name
                         })
                         self.arduino.emit_log(f"Found firmware: {subdir.name}/{ino_files[0].name}", "info")
-        
+
         if not available_firmwares:
             self.arduino.emit_log("Searching for .ino files in entire repository...", "info")
             for ino_file in extracted_dir.rglob("*.ino"):
@@ -514,21 +545,21 @@ class FirmwareManager:
                         'ino_file': ino_file.name
                     })
                     self.arduino.emit_log(f"Found: {ino_file.parent.name}/{ino_file.name}", "info")
-        
+
         self.sketch_path = None
-        
+
         host_relay = None
         client_relay = None
-        
+
         for fw in available_firmwares:
             if 'host_relay_nfc' in fw['name'].lower():
                 host_relay = fw
             elif 'client_relay_nfc' in fw['name'].lower():
                 client_relay = fw
-        
+
         if host_relay and client_relay:
             self.arduino.emit_log("Found both HOST and CLIENT relay firmwares!", "info")
-            
+
             if selected_firmware == "host":
                 self.sketch_path = host_relay['path']
                 self.arduino.emit_log(f"Selected HOST firmware: {host_relay['name']}", "success")
@@ -540,7 +571,7 @@ class FirmwareManager:
                 self.arduino.emit_log(f"Selected HOST firmware by default: {host_relay['name']}", "success")
         else:
             priority_names = ['host_relay_nfc', 'client_relay_nfc', 'DetectTags', 'BomberCat', 'Master', 'MasterReader', 'Reader', 'Main']
-            
+
             for priority in priority_names:
                 for fw in available_firmwares:
                     if priority.lower() in fw['name'].lower():
@@ -549,39 +580,39 @@ class FirmwareManager:
                         break
                 if self.sketch_path:
                     break
-        
+
         if not self.sketch_path and available_firmwares:
             self.sketch_path = available_firmwares[0]['path']
             self.arduino.emit_log(f"Selected firmware: {available_firmwares[0]['name']}", "success")
-        
+
         zip_path.unlink()
-        
+
         if not self.sketch_path:
             self.arduino.emit_log("No firmware found in repository, creating example", "warning")
             return self.create_example_firmware()
-        
+
         self.fix_firmware_compatibility()
-        
+
         self.arduino.emit_log("Firmware downloaded successfully", "success")
         self.arduino.emit_progress(60)
-        
+
         return str(self.sketch_path)
-    
+
     def fix_firmware_compatibility(self):
         """Fix library includes and platform-specific code"""
         if not self.sketch_path:
             return
-            
+
         library_fixes = {
             '"ElectronicCats_PN7150.h"': '<ElectronicCats_PN7150.h>',
             '"Electroniccats_PN7150.h"': '<ElectronicCats_PN7150.h>',
             '"PN7150.h"': '<ElectronicCats_PN7150.h>',
             'Electroniccats_PN7150.h': 'ElectronicCats_PN7150.h'
         }
-        
+
         arduino_libs = Path.home() / "Documents" / "Arduino" / "libraries"
         pn7150_found = None
-        
+
         if arduino_libs.exists():
             for item in arduino_libs.iterdir():
                 if item.is_dir() and "pn7150" in item.name.lower():
@@ -591,30 +622,30 @@ class FirmwareManager:
                             pn7150_found = header.name
                             self.arduino.emit_log(f"Found PN7150 library: {item.name} with header: {header.name}", "info")
                             break
-        
+
         if pn7150_found:
             for key in list(library_fixes.keys()):
                 if "PN7150" in key:
                     library_fixes[key] = pn7150_found
-        
+
         for ext in ['*.ino', '*.h', '*.cpp']:
             for file_path in Path(self.sketch_path).glob(ext):
                 try:
                     with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                         content = f.read()
-                    
+
                     original_content = content
                     modified = False
-                    
+
                     for old_name, new_name in library_fixes.items():
                         if old_name in content:
                             content = content.replace(old_name, new_name)
                             modified = True
                             self.arduino.emit_log(f"Fixed include: {old_name} -> {new_name} in {file_path.name}", "info")
-                    
+
                     lines = content.split('\n')
                     new_lines = []
-                    
+
                     for line in lines:
                         if '#include "' in line and any(lib in line for lib in ['PN7150', 'ElectronicCats']):
                             match = re.search(r'#include\s*"([^"]+)"', line)
@@ -629,23 +660,29 @@ class FirmwareManager:
                                     self.arduino.emit_log(f"Changed include format: {line.strip()} -> {new_line}", "info")
                                     modified = True
                                 continue
-                        
+
                         should_comment = False
                         for incompatible in config.incompatible_libraries:
+                            # Check for exact matches
                             if f'#include <{incompatible}>' in line or f'#include "{incompatible}"' in line:
                                 should_comment = True
                                 self.arduino.emit_log(f"Commenting out incompatible include: {incompatible} in {file_path.name}", "warning")
                                 break
-                        
+                            # Check for partial matches (e.g., PN7150 matches ElectronicCats_PN7150.h)
+                            elif incompatible in line and ('#include <' in line or '#include "' in line):
+                                should_comment = True
+                                self.arduino.emit_log(f"Commenting out incompatible include (partial match): {incompatible} in {file_path.name}", "warning")
+                                break
+
                         if should_comment and not line.strip().startswith('//'):
                             new_lines.append(f"// {line} // Commented out - incompatible with RP2040")
                             modified = True
                         else:
                             new_lines.append(line)
-                    
+
                     if modified:
                         content = '\n'.join(new_lines)
-                        
+
                         if '#ifdef ARDUINO_ARCH_RP2040' not in content and any(inc in original_content for inc in config.incompatible_libraries):
                             defines = """
 // Platform compatibility defines
@@ -663,24 +700,24 @@ class FirmwareManager:
                                 if line.strip() and not line.strip().startswith('//') and not line.strip().startswith('/*'):
                                     insert_pos = i
                                     break
-                            
+
                             new_lines.insert(insert_pos, defines)
                             content = '\n'.join(new_lines)
                             self.arduino.emit_log(f"Added platform compatibility defines to {file_path.name}", "info")
-                        
+
                         with open(file_path, 'w', encoding='utf-8') as f:
                             f.write(content)
-                            
+
                 except Exception as e:
                     self.arduino.emit_log(f"Warning: Could not process {file_path.name}: {e}", "warning")
-    
+
     def create_example_firmware(self):
         """Create example BomberCat firmware for RP2040"""
         self.arduino.emit_log("Creating example BomberCat firmware...", "info")
-        
+
         sketch_dir = Path(config.sketch_dir) / "BomberCat"
         sketch_dir.mkdir(parents=True, exist_ok=True)
-        
+
         sketch_content = """
 // BomberCat NFC Example for RP2040
 // Compatible with Raspberry Pi Pico and similar boards
@@ -716,27 +753,27 @@ unsigned long lastNFCRead = 0;
 void setup() {
   Serial.begin(115200);
   while (!Serial && millis() < 5000) delay(10);
-  
+
   Serial.println("===================================");
   Serial.println("BomberCat NFC Example Starting...");
   Serial.println("Running on RP2040");
   Serial.println("===================================");
-  
+
   // Initialize LED
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
-  
+
   // Connect to WiFi
   connectWiFi();
-  
+
   // Setup MQTT
   mqtt.setServer(MQTT_SERVER, MQTT_PORT);
   mqtt.setCallback(mqttCallback);
-  
+
   // Initialize NFC
   Serial.println("Initializing NFC module...");
   nfc.begin();
-  
+
   uint32_t versiondata = nfc.getFirmwareVersion();
   if (!versiondata) {
     Serial.println("ERROR: Didn't find PN53x board");
@@ -752,17 +789,17 @@ void setup() {
       delay(100);
     }
   }
-  
+
   Serial.print("Found chip PN5"); 
   Serial.println((versiondata>>24) & 0xFF, HEX);
   Serial.print("Firmware ver. "); 
   Serial.print((versiondata>>16) & 0xFF, DEC);
   Serial.print('.'); 
   Serial.println((versiondata>>8) & 0xFF, DEC);
-  
+
   // Configure to read RFID tags
   nfc.SAMConfig();
-  
+
   Serial.println("===================================");
   Serial.println("BomberCat Ready!");
   Serial.println("Waiting for NFC cards...");
@@ -775,18 +812,18 @@ void loop() {
     reconnectMQTT();
   }
   mqtt.loop();
-  
+
   // Check for NFC card
   uint8_t success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength);
-  
+
   if (success) {
     // Debounce
     if (millis() - lastNFCRead > 1000) {
       lastNFCRead = millis();
-      
+
       Serial.println("\\nNFC Card Detected!");
       digitalWrite(LED_PIN, HIGH);
-      
+
       // Convert UID to string
       String uidStr = "";
       Serial.print("UID: ");
@@ -800,7 +837,7 @@ void loop() {
         if (i < uidLength - 1) Serial.print(":");
       }
       Serial.println();
-      
+
       // Determine card type
       String cardType = "Unknown";
       if (uidLength == 4) {
@@ -809,34 +846,34 @@ void loop() {
         cardType = "Mifare Ultralight";
       }
       Serial.println("Type: " + cardType);
-      
+
       // Send via MQTT
       String topic = String(MQTT_TOPIC_PREFIX) + "/nfc/read";
       String payload = "{\\"uid\\":\\"" + uidStr + "\\",";
       payload += "\\"type\\":\\"" + cardType + "\\",";
       payload += "\\"length\\":" + String(uidLength) + ",";
       payload += "\\"host\\":" + String(HOST_NUMBER) + "}";
-      
+
       if (mqtt.publish(topic.c_str(), payload.c_str())) {
         Serial.println("MQTT: Published to " + topic);
       } else {
         Serial.println("MQTT: Failed to publish");
       }
-      
+
       delay(200);
       digitalWrite(LED_PIN, LOW);
     }
   }
-  
+
   delay(100);
 }
 
 void connectWiFi() {
   Serial.print("\\nConnecting to WiFi: ");
   Serial.println(WIFI_SSID);
-  
+
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  
+
   int attempts = 0;
   while (WiFi.status() != WL_CONNECTED && attempts < 30) {
     delay(500);
@@ -844,7 +881,7 @@ void connectWiFi() {
     digitalWrite(LED_PIN, !digitalRead(LED_PIN));
     attempts++;
   }
-  
+
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("\\nWiFi connected!");
     Serial.print("IP address: ");
@@ -855,7 +892,7 @@ void connectWiFi() {
   } else {
     Serial.println("\\nWiFi connection failed!");
   }
-  
+
   digitalWrite(LED_PIN, LOW);
 }
 
@@ -866,20 +903,20 @@ void reconnectMQTT() {
     Serial.print(":");
     Serial.print(MQTT_PORT);
     Serial.print("...");
-    
+
     if (mqtt.connect(MQTT_CLIENT_ID)) {
       Serial.println(" connected!");
-      
+
       // Subscribe to command topic
       String cmdTopic = String(MQTT_TOPIC_PREFIX) + "/cmd";
       mqtt.subscribe(cmdTopic.c_str());
       Serial.println("Subscribed to: " + cmdTopic);
-      
+
       // Publish online message
       String statusTopic = String(MQTT_TOPIC_PREFIX) + "/status";
       String statusMsg = "{\\"status\\":\\"online\\",\\"host\\":" + String(HOST_NUMBER) + "}";
       mqtt.publish(statusTopic.c_str(), statusMsg.c_str());
-      
+
       // Flash LED to indicate connection
       for (int i = 0; i < 3; i++) {
         digitalWrite(LED_PIN, HIGH);
@@ -900,18 +937,18 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   Serial.print("\\nMQTT message received [");
   Serial.print(topic);
   Serial.print("] ");
-  
+
   String message = "";
   for (int i = 0; i < length; i++) {
     message += (char)payload[i];
   }
   Serial.println(message);
-  
+
   // Handle commands
   if (message == "ping") {
     String pongTopic = String(MQTT_TOPIC_PREFIX) + "/pong";
     mqtt.publish(pongTopic.c_str(), "pong");
-    
+
     // Blink LED
     digitalWrite(LED_PIN, HIGH);
     delay(50);
@@ -933,34 +970,34 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   }
 }
 """
-        
+
         sketch_file = sketch_dir / "BomberCat.ino"
         with open(sketch_file, 'w') as f:
             f.write(sketch_content)
-        
+
         self.sketch_path = sketch_dir
         self.arduino.emit_log("Example firmware created successfully", "success")
         self.arduino.emit_progress(60)
-        
+
         return str(self.sketch_path)
-    
+
     def configure_firmware(self, wifi_ssid, wifi_pass, mqtt_server, mqtt_port, host_number):
         """Configure firmware parameters"""
         self.arduino.emit_log("Configuring firmware parameters...")
         self.arduino.emit_progress(65)
-        
+
         if not self.sketch_path:
             raise Exception("No sketch path set")
-        
+
         ino_files = list(self.sketch_path.glob("*.ino"))
         if not ino_files:
             raise Exception("No .ino file found")
-        
+
         sketch_file = ino_files[0]
-        
+
         with open(sketch_file, 'r') as f:
             content = f.read()
-        
+
         config_header = f"""
 // Auto-generated configuration by BomberCat Flasher
 #ifndef BOMBERCAT_CONFIG_H
@@ -981,11 +1018,11 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 #endif // BOMBERCAT_CONFIG_H
 """
-        
+
         config_file = self.sketch_path / "bombercat_config.h"
         with open(config_file, 'w') as f:
             f.write(config_header)
-        
+
         if '#include "bombercat_config.h"' not in content:
             lines = content.split('\n')
             insert_idx = 0
@@ -993,34 +1030,34 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
                 if line.strip() and not line.strip().startswith('//'):
                     insert_idx = i
                     break
-            
+
             lines.insert(insert_idx, '#include "bombercat_config.h"')
             content = '\n'.join(lines)
-            
+
             with open(sketch_file, 'w') as f:
                 f.write(content)
-        
+
         self.arduino.emit_log("Firmware configured successfully", "success")
         self.arduino.emit_progress(70)
-    
+
     def compile_firmware(self, fqbn, port=None):
         """Compile firmware"""
         self.arduino.emit_log("Compiling firmware...")
         self.arduino.emit_progress(75)
-        
+
         build_dir = Path(config.build_dir)
         build_dir.mkdir(exist_ok=True)
-        
+
         cmd_args = [
             "compile",
             "--fqbn", fqbn,
             "--build-path", str(build_dir),
             str(self.sketch_path)
         ]
-        
+
         if port:
             cmd_args.extend(["--port", port])
-        
+
         try:
             self.arduino.run_command(*cmd_args)
             self.arduino.emit_log("Firmware compiled successfully", "success")
@@ -1029,12 +1066,12 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         except Exception as e:
             self.arduino.emit_log(f"Compilation error: {e}", "error")
             raise
-    
+
     def flash_firmware(self, fqbn, port):
         """Flash firmware to device"""
         self.arduino.emit_log(f"Flashing firmware to {port}...")
         self.arduino.emit_progress(90)
-        
+
         try:
             self.arduino.run_command(
                 "upload",
@@ -1042,11 +1079,11 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
                 "--port", port,
                 str(self.sketch_path)
             )
-            
+
             self.arduino.emit_log("Firmware flashed successfully!", "success")
             self.arduino.emit_progress(100)
             return True
-            
+
         except Exception as e:
             self.arduino.emit_log(f"Flash error: {e}", "error")
             raise
@@ -1078,19 +1115,19 @@ def check_bootsel():
     try:
         in_bootsel = False
         bootsel_path = None
-        
+
         if platform.system() == "Windows":
             # Windows: Check all drive letters
             try:
                 import win32api
                 import win32file
-                
+
                 drives = []
                 for letter in string.ascii_uppercase:
                     drive = f"{letter}:\\"
                     if win32file.GetDriveType(drive) == win32file.DRIVE_REMOVABLE:
                         drives.append(drive)
-                
+
                 for drive in drives:
                     try:
                         volume_info = win32api.GetVolumeInformation(drive)
@@ -1100,7 +1137,7 @@ def check_bootsel():
                             break
                     except:
                         pass
-                        
+
             except ImportError:
                 # Fallback without win32api
                 for letter in string.ascii_uppercase:
@@ -1117,7 +1154,7 @@ def check_bootsel():
                                         break
                             except:
                                 pass
-                                
+
         elif platform.system() == "Darwin":  # macOS
             volumes_path = Path("/Volumes")
             if volumes_path.exists():
@@ -1136,10 +1173,10 @@ def check_bootsel():
                                     break
                         except:
                             pass
-                            
+
         else:  # Linux
             mount_points = ["/media", "/mnt", "/run/media"]
-            
+
             try:
                 result = subprocess.run(['df', '-h'], capture_output=True, text=True)
                 if 'RPI-RP2' in result.stdout:
@@ -1152,7 +1189,7 @@ def check_bootsel():
                             break
             except:
                 pass
-            
+
             import os
             for mount_base in mount_points:
                 mount_path = Path(mount_base)
@@ -1176,7 +1213,7 @@ def check_bootsel():
                                     pass
                     if in_bootsel:
                         break
-            
+
             if not in_bootsel:
                 try:
                     username = os.getenv('USER') or os.getenv('USERNAME')
@@ -1187,13 +1224,13 @@ def check_bootsel():
                             bootsel_path = str(user_media)
                 except:
                     pass
-        
+
         return jsonify({
             "in_bootsel": in_bootsel,
             "bootsel_path": bootsel_path,
             "platform": platform.system()
         })
-        
+
     except Exception as e:
         arduino_cli.emit_log(f"Error checking BOOTSEL: {str(e)}", "warning")
         return jsonify({
@@ -1221,9 +1258,9 @@ def check_dependencies():
                         })
             except:
                 pass
-        
+
         arduino_installed = arduino_cli.cli_path and os.path.exists(arduino_cli.cli_path)
-        
+
         boards_installed = False
         if arduino_installed:
             try:
@@ -1232,18 +1269,18 @@ def check_dependencies():
                     boards_installed = True
             except:
                 pass
-        
+
         if installation_state["completed"]:
             arduino_installed = True
             boards_installed = True
             arduino_cli.initialized = True
-        
+
         return jsonify({
             "arduino_cli": arduino_installed,
             "boards": boards_installed,
             "initialized": arduino_cli.initialized
         })
-        
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -1252,44 +1289,44 @@ def install_dependencies():
     """Install all dependencies"""
     if installation_state["in_progress"]:
         return jsonify({"status": "Installation already in progress"})
-    
+
     def install_task():
         installation_state["in_progress"] = True
         installation_state["completed"] = False
         installation_state["error"] = False
-        
+
         try:
             arduino_cli.initialize()
             arduino_cli.install_core("rp2040:rp2040")
             arduino_cli.install_libraries()
-            
+
             arduino_cli.emit_log("All dependencies installed successfully!", "success")
-            
+
             installation_state["completed"] = True
             installation_state["message"] = "All dependencies installed successfully!"
-            
+
             socketio.emit('installation_complete', {
                 'success': True,
                 'message': installation_state["message"]
             }, room=None)
-            
+
         except Exception as e:
             arduino_cli.emit_log(f"Installation failed: {str(e)}", "error")
             installation_state["error"] = True
             installation_state["message"] = str(e)
-            
+
             socketio.emit('installation_complete', {
                 'success': False,
                 'message': installation_state["message"]
             }, room=None)
-        
+
         finally:
             installation_state["in_progress"] = False
-    
+
     thread = threading.Thread(target=install_task)
     thread.daemon = True
     thread.start()
-    
+
     return jsonify({"status": "Installation started"})
 
 @app.route("/api/detect_boards", methods=["GET"])
@@ -1309,7 +1346,7 @@ def detect_boards():
                 "product": port.product,
                 "likely_bombercat": False
             }
-            
+
             # Check if it's likely a BomberCat (RP2040-based)
             if port.vid == 0x2E8A:  # Raspberry Pi vendor ID
                 port_info['likely_bombercat'] = True
@@ -1321,18 +1358,18 @@ def detect_boards():
                 port_info['likely_bombercat'] = True
             elif port.manufacturer and "Raspberry Pi" in port.manufacturer:
                 port_info['likely_bombercat'] = True
-            
+
             ports.append(port_info)
-        
+
         # Check BOOTSEL mode
         bootsel_check = check_bootsel().get_json()
-        
+
         return jsonify({
             "ports": ports,
             "in_bootsel": bootsel_check.get("in_bootsel", False),
             "bootsel_path": bootsel_check.get("bootsel_path")
         })
-        
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -1340,7 +1377,7 @@ def detect_boards():
 def flash():
     """Flash firmware with configuration"""
     data = request.get_json()
-    
+
     port = data.get('port')
     wifi_ssid = data.get('wifi_ssid')
     wifi_pass = data.get('wifi_password')
@@ -1349,33 +1386,33 @@ def flash():
     host_number = data.get('host_number', 1)
     fqbn = data.get('fqbn', config.arduino_fqbn)
     firmware_type = data.get('firmware_type', 'auto')
-    
+
     if not all([port, wifi_ssid]):
         return jsonify({"error": "Missing required parameters"}), 400
-    
+
     def flash_task():
         try:
             if firmware_type in ['host', 'client']:
                 preference_file = Path(config.sketch_dir) / "relay_preference.txt"
                 preference_file.write_text(firmware_type)
                 arduino_cli.emit_log(f"Set firmware preference to: {firmware_type.upper()}", "info")
-            
+
             firmware_manager.download_firmware()
             firmware_manager.configure_firmware(
                 wifi_ssid, wifi_pass, mqtt_server, mqtt_port, host_number
             )
             firmware_manager.compile_firmware(fqbn, port)
             firmware_manager.flash_firmware(fqbn, port)
-            
+
             arduino_cli.emit_log("BomberCat is ready to use!", "success")
-            
+
         except Exception as e:
             arduino_cli.emit_log(f"Flash failed: {str(e)}", "error")
-    
+
     thread = threading.Thread(target=flash_task)
     thread.daemon = True
     thread.start()
-    
+
     return jsonify({"status": "Flash operation started"})
 
 @app.route("/api/ports", methods=["GET"])
@@ -1410,7 +1447,7 @@ def firmware_info():
     sketch_dir = Path(config.sketch_dir)
     extracted_dir = sketch_dir / f"{config.repo_name}-main"
     firmware_dir = extracted_dir / "firmware"
-    
+
     available_firmwares = []
     if firmware_dir.exists():
         for subdir in firmware_dir.iterdir():
@@ -1421,7 +1458,7 @@ def firmware_info():
                         'name': subdir.name,
                         'type': 'unknown'
                     }
-                    
+
                     if 'host_relay_nfc' in subdir.name.lower():
                         fw_info['type'] = 'host'
                         fw_info['description'] = 'HOST device - connects to NFC reader'
@@ -1434,9 +1471,9 @@ def firmware_info():
                     elif 'detecttags' in subdir.name.lower():
                         fw_info['type'] = 'detector'
                         fw_info['description'] = 'NFC tag detector'
-                    
+
                     available_firmwares.append(fw_info)
-    
+
     return jsonify({"firmwares": available_firmwares})
 
 # SocketIO Events
@@ -1444,7 +1481,7 @@ def firmware_info():
 def handle_connect():
     emit('connected', {'data': 'Connected to BomberCat Arduino Flasher'})
     print(f"Client connected: {request.sid}")
-    
+
     if installation_state["in_progress"]:
         emit('installation_status', {
             'in_progress': True,
@@ -1516,5 +1553,5 @@ BOOTSEL Mode Instructions:
 
 Starting server on http://localhost:{0}
 """.format(config.flask_port))
-    
+
     socketio.run(app, host=config.flask_host, port=config.flask_port, debug=config.flask_debug)

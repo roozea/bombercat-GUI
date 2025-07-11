@@ -43,7 +43,7 @@
 #include <WiFiNINA.h>
 #include <PubSubClient.h>
 #include <SerialCommand.h>
-#include <ElectronicCats_PN7150.h>
+// #include <ElectronicCats_PN7150.h> // Commented out - incompatible with RP2040
 
 //#define DEBUG
 #define SERIALCOMMAND_HARDWAREONLY
@@ -60,7 +60,7 @@ char hostId[] = "BomberCatHost-CARD##";
 using namespace mbed;
 
 //Get limits of the In Application Program (IAP) flash, ie. the internal MCU flash.
-#include "FlashIAPLimits.h"
+// #include "FlashIAPLimits.h" // Commented out - incompatible with RP2040
 auto iapLimits { getFlashIAPLimits() };
 
 //Create a block device on the available space of the FlashIAP
